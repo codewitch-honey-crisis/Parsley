@@ -11,6 +11,8 @@ string code = CSharpSynthesizer.Synthesize(analysis);  // the parser class
 string runtime = CSharpSynthesizer.RuntimeSource;      // ParserRuntime.cs, needed alongside it
 ```
 
+XBNF is a loose superset of EBNF. The documentation is [here](XBNF.md).
+
 The synthesized class plus `ParsleyRuntime.cs` compile on their own (C# 12, .NET 8), with no reference to Parsley:
 
 ```csharp
