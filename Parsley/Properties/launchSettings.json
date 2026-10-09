@@ -1,8 +1,12 @@
 {
   "profiles": {
-    "Parsley": {
+    "Json": {
       "commandName": "Project",
       "commandLineArgs": "..\\..\\..\\json.xbnf -l ..\\..\\..\\json.lex -s"
+    },
+    "Usage": {
+      "commandName": "Project",
+      "commandLineArgs": "--help"
     }
   }
 }

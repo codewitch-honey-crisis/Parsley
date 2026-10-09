@@ -4,12 +4,22 @@ Turns an XBNF grammar into C# recursive descent that reads as if written by hand
 
 ## Use
 
-```csharp
-var grammar = Grammar.ReadFrom("json.xbnf");          // or build one with the Ebnf helpers
-var analysis = GrammarAnalysis.Analyze(grammar);       // problems are in analysis.Messages
-string code = CSharpSynthesizer.Synthesize(analysis);  // the parser class
-string runtime = CSharpSynthesizer.RuntimeSource;      // ParserRuntime.cs, needed alongside it
 ```
+parsley
+
+Usage: parsley [<grammar-file>] [--lexer <lexer>] [--output <code-file>] [--shared]
+
+    <grammar-file>            The path to the XBNF grammar input file. Defaults to <stdin>.
+    -l, --lexer <lexer>       The lexer output file to generate.
+    -o, --output <code-file>  The path to the ouput code file. Defaults to <stdout>.
+    -s, --shared              Generate the shared runtime file.
+
+```
+
+- The grammar file is in XBNF, a superset of EBNF with some extra features for parser synthesis. 
+- The lexer file is generated if specified and contains 1 rule per line, `<name>` `<pattern>` (separated by a space) and hidden terminal names are preceded with `.` as in `.whitespace`,
+- The output code file is a C# class that implements `ParserBase` and has a `Parse()` method returning a `ParseNode`. The shared runtime file is `ParsleyRuntime.cs`, which contains the definitions of `Token`, `LookAheadEnumerator`, `ParseNode`, and `ParserBase`. 
+- If shared is indicated, `ParsleyRuntime.cs` is generated in the same directory as the output code file, or the current working directory if no output code file is specified.
 
 XBNF is a loose superset of EBNF. The documentation is [here](XBNF.md).
 
@@ -31,20 +41,6 @@ non-terminal. Each `TerminalDeclaration` keeps its `Definition` expression and a
 generator: patterns pass through unvalidated with the quotes removed (`\'` becomes `'`), literals are escaped,
 and other definitions are built from their constructs.
 
-For prototyping without compiling, `new GrammarInterpreter(analysis, tokens).Parse()` makes exactly the same
-choices. `RegexLexer` is a stand-in lexer built from the terminal declarations, for tests only.
-
-## Layout
-
-| Folder | What's in it |
-| --- | --- |
-| `src/Parsley/Grammar` | Grammar model, `Ebnf` builder helpers, XBNF reader and writer, validation |
-| `src/Parsley/Analysis` | Symbol ids, left recursion to loops, FIRST/FOLLOW per node, decision classification |
-| `src/Parsley/Synthesis` | C# synthesizer, grammar interpreter, stand-in regex lexer |
-| `src/Parsley/Runtime` | `ParsleyRuntime.cs`: Token, LookAheadEnumerator, ParseNode, ParserBase (also embedded in the dll) |
-| `src/Parsley/ParseContext` | Your ParseContext, with two fixes (see below) and `#nullable disable` at the top |
-| `tests` | Test runner and tests; `json.xbnf` with its `\u` pattern fixed |
-
 ## Build and test
 
-Open `Parsley.sln` in Visual Studio, or run `dotnet build Parsley.sln`. It has two projects:
+Open `Parsley.sln` in Visual Studio, or run `dotnet build Parsley.sln`.
