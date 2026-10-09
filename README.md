@@ -7,13 +7,12 @@ Turns an XBNF grammar into C# recursive descent that reads as if written by hand
 ```
 parsley
 
-Usage: parsley [<grammar-file>] [--lexer <lexer>] [--output <code-file>] [--shared]
+Usage: parsley [<grammar-file>] [--lexer <lexer-file>] [--output <code-file>] [--shared]
 
     <grammar-file>            The path to the XBNF grammar input file. Defaults to <stdin>.
-    -l, --lexer <lexer>       The lexer output file to generate.
+    -l, --lexer <lexer-file>  The lexer output file to generate.
     -o, --output <code-file>  The path to the ouput code file. Defaults to <stdout>.
-    -s, --shared              Generate the shared runtime file.
-
+    -s, --shared              Generate the ParsleyRuntime.cs shared runtime file.
 ```
 
 - The grammar file is in XBNF, a superset of EBNF with some extra features for parser synthesis. 
