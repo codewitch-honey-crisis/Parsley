@@ -1,0 +1,47 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>12</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>Parsley</RootNamespace>
+    <AssemblyName>parsley</AssemblyName>
+    <!-- ParseContext.CreateFromUrl uses WebRequest, which .NET marks obsolete -->
+    <NoWarn>$(NoWarn);SYSLIB0014</NoWarn>
+  </PropertyGroup>
+  <PropertyGroup>
+    <BinDir Condition="'$(SolutionDir)' != '' and '$(SolutionDir)' != '*Undefined*'">$(SolutionDir)bin\</BinDir>
+    <BinDir Condition="'$(BinDir)' == ''">$(MSBuildProjectDirectory)\..\bin\</BinDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="ParsleyRuntime.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- compiled into the library and also embedded, so CSharpSynthesizer.RuntimeSource can hand it out -->
+    <EmbeddedResource Include="Runtime\ParsleyRuntime.cs" LogicalName="Parsley.Runtime.ParsleyRuntime.cs" />
+  </ItemGroup>
+  <!-- Copy only what's needed to run the tool into the bin folder. -->
+  <Target Name="CopyToolTobinDir" AfterTargets="Build">
+    <ItemGroup>
+      <!-- The tool itself, its launcher, and the runtime config files -->
+      <_ToolFiles Include="$(TargetPath)" />
+      <_ToolFiles Include="$(TargetDir)$(TargetName).exe" Condition="Exists('$(TargetDir)$(TargetName).exe')" />
+      <_ToolFiles Include="$(TargetDir)$(TargetName)" Condition="Exists('$(TargetDir)$(TargetName)')" />
+      <_ToolFiles Include="$(TargetDir)$(TargetName).runtimeconfig.json" Condition="Exists('$(TargetDir)$(TargetName).runtimeconfig.json')" />
+      <_ToolFiles Include="$(TargetDir)$(TargetName).deps.json" Condition="Exists('$(TargetDir)$(TargetName).deps.json')" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_ToolFiles)" DestinationFolder="$(BinDir)" SkipUnchangedFiles="true" />
+
+    <Copy SourceFiles="@(_ToolDeps)" DestinationFiles="@(_ToolDeps->'$(BinDir)%(DestinationSubDirectory)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+  </Target>
+  <ItemGroup>    
+    <PackageReference Include="Cli.Generator" Version="1.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+</Project>

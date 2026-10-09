@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "LexGen": {
+      "commandName": "Project",
+      "commandLineArgs": "..\\..\\..\\json.lex --class JsonLexer --namespace Json"
+    }
+  }
+}

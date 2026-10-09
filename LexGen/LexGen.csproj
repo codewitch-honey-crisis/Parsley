@@ -1,0 +1,65 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>parsley-luthor</AssemblyName>
+  </PropertyGroup>
+
+  <!-- Use $(SolutionDir) when building the .sln; fall back to the folder above
+       this project (same place the luthor.dll HintPath points) for
+       `dotnet build LexGen.csproj`. -->
+  <PropertyGroup>
+    <BinDir Condition="'$(SolutionDir)' != '' and '$(SolutionDir)' != '*Undefined*'">$(SolutionDir)bin\</BinDir>
+    <BinDir Condition="'$(BinDir)' == ''">$(MSBuildProjectDirectory)\..\bin\</BinDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Templates\LexerRuntime.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Templates\LexerRuntime.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Cli.Generator" Version="1.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="luthor">
+      <HintPath>..\bin\luthor.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <!-- Copy only what's needed to run the tool into the bin folder. -->
+  <Target Name="CopyToolTobinDir" AfterTargets="Build">
+    <ItemGroup>
+      <!-- The tool itself, its launcher, and the runtime config files -->
+      <_ToolFiles Include="$(TargetPath)" />
+      <_ToolFiles Include="$(TargetDir)$(TargetName).exe" Condition="Exists('$(TargetDir)$(TargetName).exe')" />
+      <_ToolFiles Include="$(TargetDir)$(TargetName)" Condition="Exists('$(TargetDir)$(TargetName)')" />
+      <_ToolFiles Include="$(TargetDir)$(TargetName).runtimeconfig.json" Condition="Exists('$(TargetDir)$(TargetName).runtimeconfig.json')" />
+      <_ToolFiles Include="$(TargetDir)$(TargetName).deps.json" Condition="Exists('$(TargetDir)$(TargetName).deps.json')" />
+
+      <!-- Runtime dependency DLLs (e.g. from packages). luthor.dll is skipped
+           because it already lives in bin. -->
+      <_ToolDeps Include="@(ReferenceCopyLocalPaths)"
+                 Condition="'%(Extension)' == '.dll' and '%(Filename)' != 'luthor'" />
+    </ItemGroup>
+
+    <Copy SourceFiles="@(_ToolFiles)"
+          DestinationFolder="$(BinDir)"
+          SkipUnchangedFiles="true" />
+
+    <Copy SourceFiles="@(_ToolDeps)"
+          DestinationFiles="@(_ToolDeps->'$(BinDir)%(DestinationSubDirectory)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>

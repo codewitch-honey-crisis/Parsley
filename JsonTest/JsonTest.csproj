@@ -1,0 +1,34 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <BinDir Condition="'$(SolutionDir)' != '' and '$(SolutionDir)' != '*Undefined*'">$(SolutionDir)bin\</BinDir>
+    <BinDir Condition="'$(BinDir)' == ''">$(MSBuildProjectDirectory)\..\bin\</BinDir>
+    <SourceDir>$(MSBuildProjectDirectory)\</SourceDir>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <!-- Generated files: keep them out of the default glob so they're only added once, by the target below -->
+
+
+  <!-- Step 1: grammar -> JsonParser.cs + json.lex -->
+  <Target Name="GenerateJsonParser" BeforeTargets="BeforeBuild" Inputs="$(SourceDir)json.xbnf" Outputs="$(SourceDir)JsonParser.cs;$(SourceDir)json.lex">
+    <Exec Command="dotnet &quot;$(BinDir)parsley.dll&quot; &quot;$(SourceDir)json.xbnf&quot; -s -l &quot;$(SourceDir)json.lex&quot; -o &quot;$(SourceDir)JsonParser.cs&quot;" />
+  </Target>
+
+  <!-- Step 2: json.lex -> JsonLexer.cs (runs after the parser has produced json.lex) -->
+  <Target Name="GenerateJsonLexer" BeforeTargets="BeforeBuild" DependsOnTargets="GenerateJsonParser" Inputs="$(SourceDir)json.lex" Outputs="$(SourceDir)JsonLexer.cs">
+    <Exec Command="dotnet &quot;$(BinDir)parsley-luthor.dll&quot; &quot;$(SourceDir)json.lex&quot; -n Json -c JsonLexer -o &quot;$(SourceDir)JsonLexer.cs&quot;" />
+  </Target>
+
+  <!-- Step 3: always add the generated files to compilation -->
+  <Target Name="IncludeGeneratedJsonSources" BeforeTargets="BeforeBuild" DependsOnTargets="GenerateJsonLexer">
+    <ItemGroup>
+      <Compile Include="$(SourceDir)JsonLexer.cs;$(SourceDir)JsonParser.cs" />
+    </ItemGroup>
+  </Target>
+</Project>
