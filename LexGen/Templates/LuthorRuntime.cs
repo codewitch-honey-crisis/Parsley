@@ -7,13 +7,13 @@ using System.Text;
 
 // A source of code units for the matcher. Implemented by small structs so the JIT
 // specializes Match<T> for each input kind (no interface dispatch in the inner loop).
-internal interface ILexerUnitSource
+internal interface ILuthorUnitSource
 {
     /// <summary>Code unit at offset from the start of the current token, or -1 at end of input.</summary>
     int Peek(int offset);
 }
 
-internal static class LexerRuntime
+internal static class LuthorRuntime
 {
     internal const int DefaultTabWidth = 4;
 
@@ -22,7 +22,7 @@ internal static class LexerRuntime
     //   accept, bol, eol, n, n x (min, max, target)
 
     /// <summary>Longest match at the start of <paramref name="text"/>. Returns (symbol or -1, length in units).</summary>
-    internal static (int Token, int Length) Match<T>(int[] dfa, ref T text, bool atLineStart) where T : struct, ILexerUnitSource
+    internal static (int Token, int Length) Match<T>(int[] dfa, ref T text, bool atLineStart) where T : struct, ILuthorUnitSource
     {
         int state = 1, accept = -1, length = 0, i = 0;
         bool bol = atLineStart;
@@ -88,7 +88,7 @@ internal static class LexerRuntime
         }
     }
 
-    readonly struct StringSource : ILexerUnitSource
+    readonly struct StringSource : ILuthorUnitSource
     {
         readonly string _text; readonly int _pos;
         public StringSource(string text, int pos) { _text = text; _pos = pos; }
@@ -118,7 +118,7 @@ internal static class LexerRuntime
     static IEnumerable<(long Position, int Line, int Column, int Symbol, string Text)> TokenizeReader(
         int[] dfa, TextReader reader, int tabWidth, long position, int line, int column)
     {
-        var window = new LexerCharWindow(reader);
+        var window = new LuthorCharWindow(reader);
         var lc = new LineColumnTracker(dfa[0], tabWidth, line, column);
         long pos = position;
         bool atLineStart = column == 1;
@@ -136,10 +136,10 @@ internal static class LexerRuntime
         }
     }
 
-    readonly struct CharWindowSource : ILexerUnitSource
+    readonly struct CharWindowSource : ILuthorUnitSource
     {
-        readonly LexerCharWindow _w;
-        public CharWindowSource(LexerCharWindow w) => _w = w;
+        readonly LuthorCharWindow _w;
+        public CharWindowSource(LuthorCharWindow w) => _w = w;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Peek(int offset) => _w.Peek(offset);
     }
@@ -210,14 +210,14 @@ internal struct LineColumnTracker
 // A growable window over a TextReader. Index 0 is the start of the current token.
 // Chars are read on demand; Take() consumes from the front. The buffer only grows
 // when a single token (plus its lookahead/overrun) doesn't fit.
-internal sealed class LexerCharWindow
+internal sealed class LuthorCharWindow
 {
     readonly TextReader _reader;
     char[] _buf;
     int _start, _end;
     bool _eof;
 
-    public LexerCharWindow(TextReader reader, int capacity = 4096)
+    public LuthorCharWindow(TextReader reader, int capacity = 4096)
     {
         _reader = reader ?? throw new ArgumentNullException(nameof(reader));
         _buf = new char[capacity];

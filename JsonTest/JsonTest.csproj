@@ -25,10 +25,11 @@
     <Exec Command="dotnet &quot;$(BinDir)parsley-luthor.dll&quot; &quot;$(SourceDir)json.lex&quot; -n Json -c JsonLexer -o &quot;$(SourceDir)JsonLexer.cs&quot;" />
   </Target>
 
-  <!-- Step 3: always add the generated files to compilation -->
+  <!-- Step 3: always add the generated files to compilation 
   <Target Name="IncludeGeneratedJsonSources" BeforeTargets="BeforeBuild" DependsOnTargets="GenerateJsonLexer">
     <ItemGroup>
       <Compile Include="$(SourceDir)JsonLexer.cs;$(SourceDir)JsonParser.cs" />
     </ItemGroup>
   </Target>
+  -->
 </Project>

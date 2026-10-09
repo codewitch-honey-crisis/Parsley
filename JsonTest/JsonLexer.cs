@@ -17,7 +17,7 @@ internal interface ILexerUnitSource
     int Peek(int offset);
 }
 
-internal static class LexerRuntime
+internal static class LuthorRuntime
 {
     internal const int DefaultTabWidth = 4;
 
@@ -306,14 +306,14 @@ static class JsonLexer
         97, 102, 237
     };
     public static IEnumerable<Parsley.Runtime.Token> Tokenize(TextReader reader, long position = 0, int line = 1, int column = 1, int tabWidth = 4) {
-        foreach(var tok in LexerRuntime.Tokenize(_dfa, reader, tabWidth, position, line, column))
+        foreach(var tok in LuthorRuntime.Tokenize(_dfa, reader, tabWidth, position, line, column))
         {
             if(tok.Symbol == whitespace) continue;
             yield return new Parsley.Runtime.Token(tok.Symbol, tok.Text, tok.Line, tok.Column, tok.Position);
         }
     }
     public static IEnumerable<Parsley.Runtime.Token> Tokenize(string text, long position = 0, int line = 1, int column = 1, int tabWidth = 4) {
-        foreach(var tok in LexerRuntime.Tokenize(_dfa, text, tabWidth, position, line, column))
+        foreach(var tok in LuthorRuntime.Tokenize(_dfa, text, tabWidth, position, line, column))
         {
             if(tok.Symbol == whitespace) continue;
             yield return new Parsley.Runtime.Token(tok.Symbol, tok.Text, tok.Line, tok.Column, tok.Position);

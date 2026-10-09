@@ -88,7 +88,7 @@ namespace LexGen
                     writer.WriteLine($"namespace {options.Namespace};");
                     writer.WriteLine();
                 }
-                using var resReader = new StreamReader(Assembly.GetExecutingAssembly().GetManifestResourceStream("LexGen.Templates.LexerRuntime.cs")!);
+                using var resReader = new StreamReader(Assembly.GetExecutingAssembly().GetManifestResourceStream("LexGen.Templates.LuthorRuntime.cs")!);
                 string? line;
                 while (null != (line = resReader.ReadLine()))
                 {
@@ -107,7 +107,7 @@ namespace LexGen
                 writer.WriteLine();
                 writer.WriteLine("    };");
                 writer.WriteLine("    public static IEnumerable<Parsley.Runtime.Token> Tokenize(TextReader reader, long position = 0, int line = 1, int column = 1, int tabWidth = 4) {");
-                writer.WriteLine("        foreach(var tok in LexerRuntime.Tokenize(_dfa, reader, tabWidth, position, line, column))");
+                writer.WriteLine("        foreach(var tok in LuthorRuntime.Tokenize(_dfa, reader, tabWidth, position, line, column))");
                 writer.WriteLine("        {");
                 var hiddenRules = rules.Where(p => p.IsHidden).Select(p => p.Name).ToList();
                 if (hiddenRules.Count > 0)
@@ -126,7 +126,7 @@ namespace LexGen
                 writer.WriteLine("        }");
                 writer.WriteLine("    }");
                 writer.WriteLine("    public static IEnumerable<Parsley.Runtime.Token> Tokenize(string text, long position = 0, int line = 1, int column = 1, int tabWidth = 4) {");
-                writer.WriteLine("        foreach(var tok in LexerRuntime.Tokenize(_dfa, text, tabWidth, position, line, column))");
+                writer.WriteLine("        foreach(var tok in LuthorRuntime.Tokenize(_dfa, text, tabWidth, position, line, column))");
                 writer.WriteLine("        {");
                 hiddenRules = rules.Where(p => p.IsHidden).Select(p => p.Name).ToList();
                 if (hiddenRules.Count > 0)

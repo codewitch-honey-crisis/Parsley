@@ -17,14 +17,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Templates\LexerRuntime.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <EmbeddedResource Include="Templates\LexerRuntime.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Cli.Generator" Version="1.0.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -49,17 +41,12 @@
 
       <!-- Runtime dependency DLLs (e.g. from packages). luthor.dll is skipped
            because it already lives in bin. -->
-      <_ToolDeps Include="@(ReferenceCopyLocalPaths)"
-                 Condition="'%(Extension)' == '.dll' and '%(Filename)' != 'luthor'" />
+      <_ToolDeps Include="@(ReferenceCopyLocalPaths)" Condition="'%(Extension)' == '.dll' and '%(Filename)' != 'luthor'" />
     </ItemGroup>
 
-    <Copy SourceFiles="@(_ToolFiles)"
-          DestinationFolder="$(BinDir)"
-          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_ToolFiles)" DestinationFolder="$(BinDir)" SkipUnchangedFiles="true" />
 
-    <Copy SourceFiles="@(_ToolDeps)"
-          DestinationFiles="@(_ToolDeps->'$(BinDir)%(DestinationSubDirectory)%(Filename)%(Extension)')"
-          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_ToolDeps)" DestinationFiles="@(_ToolDeps->'$(BinDir)%(DestinationSubDirectory)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
   </Target>
 
 </Project>
