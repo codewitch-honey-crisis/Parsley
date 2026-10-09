@@ -1,4 +1,4 @@
-# Parsley parser synthesis (phases 1–3)
+# Parsley parser synthesis
 
 Turns an XBNF grammar into C# recursive descent that reads as if written by hand.
 
