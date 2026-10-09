@@ -88,7 +88,8 @@ namespace LexGen
                     writer.WriteLine($"namespace {options.Namespace};");
                     writer.WriteLine();
                 }
-                using var resReader = new StreamReader(Assembly.GetExecutingAssembly().GetManifestResourceStream("LexGen.Templates.LuthorRuntime.cs")!);
+                using var resReader = new StreamReader(Assembly.GetEntryAssembly()!.GetManifestResourceStream("LexGen.Templates.LuthorRuntime.cs")!);
+                
                 string? line;
                 while (null != (line = resReader.ReadLine()))
                 {

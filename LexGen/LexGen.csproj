@@ -15,6 +15,12 @@
     <BinDir Condition="'$(SolutionDir)' != '' and '$(SolutionDir)' != '*Undefined*'">$(SolutionDir)bin\</BinDir>
     <BinDir Condition="'$(BinDir)' == ''">$(MSBuildProjectDirectory)\..\bin\</BinDir>
   </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="Templates\LuthorRuntime.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Templates\LuthorRuntime.cs" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Cli.Generator" Version="1.0.0">
@@ -25,7 +31,7 @@
 
   <ItemGroup>
     <Reference Include="luthor">
-      <HintPath>..\bin\luthor.dll</HintPath>
+      <HintPath>Luthor\luthor.dll</HintPath>
     </Reference>
   </ItemGroup>
 
@@ -39,9 +45,8 @@
       <_ToolFiles Include="$(TargetDir)$(TargetName).runtimeconfig.json" Condition="Exists('$(TargetDir)$(TargetName).runtimeconfig.json')" />
       <_ToolFiles Include="$(TargetDir)$(TargetName).deps.json" Condition="Exists('$(TargetDir)$(TargetName).deps.json')" />
 
-      <!-- Runtime dependency DLLs (e.g. from packages). luthor.dll is skipped
-           because it already lives in bin. -->
-      <_ToolDeps Include="@(ReferenceCopyLocalPaths)" Condition="'%(Extension)' == '.dll' and '%(Filename)' != 'luthor'" />
+      <!-- Runtime dependency DLLs (e.g. from packages). -->
+      <_ToolDeps Include="@(ReferenceCopyLocalPaths)" Condition="'%(Extension)' == '.dll'" />
     </ItemGroup>
 
     <Copy SourceFiles="@(_ToolFiles)" DestinationFolder="$(BinDir)" SkipUnchangedFiles="true" />
