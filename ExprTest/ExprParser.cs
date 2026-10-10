@@ -37,7 +37,21 @@ public partial class ExprParser : ParserBase
 	/// <summary>
 	/// Parses a complete Expr and returns its tree. Problems are reported in <see cref="ParserBase.Errors"/>.
 	/// </summary>
-	public ParseNode Parse() => Run(ParseExpr);
+	public static bool TryParse(IEnumerable<Token> tokens,out ParseNode result, out IReadOnlyList<ParseError> errors)
+	{
+		var parser = new ExprParser(tokens);
+		result = parser.Run(parser.ParseExpr);
+		errors = parser.Errors;
+		return parser.Errors.Count == 0;
+	}
+	public static ParseNode Parse(IEnumerable<Token> tokens)
+	{
+		if(!TryParse(tokens, out var result, out var errors))
+		{
+			throw new ParseException(errors);
+		}
+		return result;
+	}
 
 	// Expr<start>= Term { add Term | sub Term }; (left recursion rewritten as a loop)
 	ParseNode ParseExpr()

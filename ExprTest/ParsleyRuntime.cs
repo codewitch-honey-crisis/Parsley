@@ -163,7 +163,12 @@ namespace Parsley.Runtime
                 c._Write(sb, depth + 1);
         }
     }
+    public sealed class ParseException : Exception
+    {
+        public IReadOnlyCollection<ParseError> Errors { get; }
+        public ParseException(IReadOnlyCollection<ParseError> errors) : base("One or more parse errors occured.") { Errors = errors; }
 
+    }
     public sealed record ParseError(string Message, int Line, int Column, long Position)
     {
         public override string ToString() => $"{Message} at line {Line}, column {Column}";

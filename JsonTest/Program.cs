@@ -6,8 +6,7 @@ namespace JsonTest
         static void Main(string[] args)
         {
             var lexer =  JsonLexer.Tokenize("{\"name\": \"John\", \"age\": 30, \"isStudent\": false, \"emails\": [ \"john@mydomain.com\", \"support@widgetco.com\"  ] }");
-            var parser = new JsonParser(lexer);
-            Console.WriteLine(parser.Parse().ToString());
+            Console.WriteLine(JsonParser.Parse(lexer));
         }
     }
 }

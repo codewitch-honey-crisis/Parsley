@@ -66,16 +66,39 @@ namespace Parsley.Tests
 		{
 			var list = tokens.ToList();
 			var arr = Array.CreateInstance(_tokenType, list.Count);
-			for (var i = 0; i < list.Count; ++i)
+			var parseNodeType = _parserType.GetMethod("Parse",BindingFlags.Static | BindingFlags.Public)!.ReturnType;
+            var parseErrorType = parseNodeType.Assembly.GetType("Parsley.Runtime.ParseError", throwOnError: true)!;
+            var errorListType = typeof(IReadOnlyList<>).MakeGenericType(parseErrorType);
+            var tokenEnumType = typeof(IEnumerable<>).MakeGenericType(_tokenType);
+
+            for (var i = 0; i < list.Count; ++i)
 			{
 				var t = list[i];
 				arr.SetValue(Activator.CreateInstance(_tokenType, t.SymbolId, t.Value, t.Line, t.Column, t.Position), i);
 			}
-			var parser = Activator.CreateInstance(_parserType, arr)!;
-			var root = _parserType.GetMethod("Parse")!.Invoke(parser, null)!;
-			var errors = ((IEnumerable)_parserType.GetProperty("Errors")!.GetValue(parser)!).Cast<object>().Select(e => e.ToString()!).ToList();
-			return (root.ToString()!, errors);
-		}
+            var tryParse = _parserType.GetMethod(
+			"TryParse",
+			BindingFlags.Public | BindingFlags.Static,
+			binder: null,
+			types: new[]
+			{
+				tokenEnumType,
+				parseNodeType.MakeByRefType(),
+				errorListType.MakeByRefType()
+			},
+			modifiers: null)
+			?? throw new MissingMethodException(_parserType.FullName, "TryParse");
+
+            var args = new object?[] { arr, null, null };
+            var success = (bool)tryParse.Invoke(null, args)!;
+
+            var result = args[1];
+            var errors = (System.Collections.IEnumerable?)args[2];
+
+            return (
+                result?.ToString() ?? "",
+                errors?.Cast<object>().Select(e => e.ToString()!).ToList() ?? new List<string>());
+        }
 	}
 
 	static class Interp

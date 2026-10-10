@@ -236,9 +236,21 @@ namespace Parsley
 				_Line("/// <summary>");
 				_Line($"/// Parses a complete {g.StartSymbol} and returns its tree. Problems are reported in <see cref=\"ParserBase.Errors\"/>.");
 				_Line("/// </summary>");
-				_Line($"public ParseNode Parse() => Run({_MethodName(g.StartSymbol!)});");
+				_Open("public static bool TryParse(IEnumerable<Token> tokens,out ParseNode result, out IReadOnlyList<ParseError> errors)");
+				_Line($"var parser = new {_className}(tokens);");
+				_Line($"result = parser.Run(parser.{_MethodName(g.StartSymbol!)});");
+                _Line($"errors = parser.Errors;");
+				_Line($"return parser.Errors.Count == 0;");
+                _Close();
 
-				foreach (var p in g.Productions)
+                _Open("public static ParseNode Parse(IEnumerable<Token> tokens)");
+				_Open($"if(!TryParse(tokens, out var result, out var errors))");
+				_Line("throw new ParseException(errors);");
+				_Close();
+				_Line("return result;");
+                _Close();
+
+                foreach (var p in g.Productions)
 				{
 					_Line();
 					_Production(p);

@@ -88,6 +88,13 @@ namespace Parsley
 			var i = IndexOf(name);
 			return -1 < i ? this[i] : null;
 		}
+		public bool TryGetValue(string name, out object? value)
+		{
+			var attr = Find(name);
+			if (attr == null) { value = null; return false; }
+			value = attr.Value;
+			return true;
+		}
 		/// <summary>
 		/// True when the attribute is present as a bare flag or set to true
 		/// </summary>

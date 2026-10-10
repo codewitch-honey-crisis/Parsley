@@ -20,7 +20,9 @@ namespace Parsley
 		public Expression Expression { get; set; }
 		public AttributeList Attributes { get; } = new AttributeList();
 		public bool IsCollapsed => Attributes.IsSet("collapsed");
-		public Production Clone()
+		public string Type => Attributes.TryGetValue("type", out var v) && v is string s ? s : "object";
+        public string? Converter => Attributes.TryGetValue("converter", out var v) && v is string s ? s : null;
+        public Production Clone()
 		{
 			var result = new Production(Name, Expression.Clone());
 			result.CopyLocation(this);
@@ -327,7 +329,7 @@ namespace Parsley
 							if (!(a.Value is bool))
 								result.Add(new GrammarMessage(ErrorLevel.Warning, $"On \"{t.Name}\": {a.Name} expects true or false", a));
 							break;
-						case "blockEnd": case "expected":
+						case "type": case "expected":
 							if (!(a.Value is string))
 								result.Add(new GrammarMessage(ErrorLevel.Warning, $"On \"{t.Name}\": {a.Name} expects a string", a));
 							break;
@@ -356,7 +358,7 @@ namespace Parsley
 					result.Add(new GrammarMessage(ErrorLevel.Warning, $"Production \"{p.Name}\" is unreachable from the start symbol", p));
 			return result;
 		}
-		static readonly HashSet<string> _productionAttributes = new HashSet<string> { "start", "collapsed", "nowarn", "policy", "expected", "sync", "terminal" };
+		static readonly HashSet<string> _productionAttributes = new HashSet<string> { "start", "collapsed", "converter", "nowarn", "policy", "expected", "sync", "terminal", "type" };
 		static readonly HashSet<string> _expressionAttributes = new HashSet<string> { "policy", "sync", "expected" };
 		static void _ValidateAttributes(AttributeList attrs, GrammarNode owner, bool isProduction, IList<GrammarMessage> result)
 		{
@@ -385,7 +387,15 @@ namespace Parsley
 						if (!(a.Value is string) && !(a.Value is bool))
 							result.Add(new GrammarMessage(ErrorLevel.Warning, "sync on an expression expects a string of terminal names or literals", a));
 						break;
-					default:
+					case "type":
+						if (!(a.Value is string))
+							result.Add(new GrammarMessage(ErrorLevel.Warning, "type expects a string", a));
+						break;
+                    case "converter":
+                        if (!(a.Value is string))
+                            result.Add(new GrammarMessage(ErrorLevel.Warning, "converter expects a string", a));
+                        break;
+                    default:
 						if (!(a.Value is bool))
 							result.Add(new GrammarMessage(ErrorLevel.Warning, $"{a.Name} expects true or false", a));
 						break;

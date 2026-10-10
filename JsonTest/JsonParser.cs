@@ -40,7 +40,21 @@ public partial class JsonParser : ParserBase
 	/// <summary>
 	/// Parses a complete Json and returns its tree. Problems are reported in <see cref="ParserBase.Errors"/>.
 	/// </summary>
-	public ParseNode Parse() => Run(ParseJson);
+	public static bool TryParse(IEnumerable<Token> tokens,out ParseNode result, out IReadOnlyList<ParseError> errors)
+	{
+		var parser = new JsonParser(tokens);
+		result = parser.Run(parser.ParseJson);
+		errors = parser.Errors;
+		return parser.Errors.Count == 0;
+	}
+	public static ParseNode Parse(IEnumerable<Token> tokens)
+	{
+		if(!TryParse(tokens, out var result, out var errors))
+		{
+			throw new ParseException(errors);
+		}
+		return result;
+	}
 
 	// Json<start>= Object | Array;
 	ParseNode ParseJson()
