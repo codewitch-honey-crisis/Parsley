@@ -13,8 +13,7 @@ Unary= sub Unary | Power;
 Power= Primary [ pow Unary ];
 // collapsed: a number or a parenthesized Expr sits directly in its parent
 Primary<collapsed>= number | lparen Expr rparen;
-
-number<type="int",converter="System.ComponentModel.Int32Converter">= '[0-9]+(\.[0-9]+)?';
+number= '[0-9]+(\.[0-9]+)?';
 add= "+";
 sub= "-";
 mul= "*";
@@ -24,3 +23,4 @@ pow= "^";
 lparen<collapsed>= "(";
 rparen<collapsed>= ")";
 whitespace<hidden>= '[ \t\r\n]+';
+
