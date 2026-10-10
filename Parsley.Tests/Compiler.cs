@@ -90,7 +90,7 @@ namespace Parsley.Tests
 			?? throw new MissingMethodException(_parserType.FullName, "TryParse");
 
             var args = new object?[] { arr, null, null };
-            var success = (bool)tryParse.Invoke(null, args)!;
+            tryParse.Invoke(null, args);
 
             var result = args[1];
             var errors = (System.Collections.IEnumerable?)args[2];
