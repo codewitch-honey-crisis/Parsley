@@ -3,6 +3,21 @@
     <BinDir Condition="'$(SolutionDir)' != '' and '$(SolutionDir)' != '*Undefined*'">$(SolutionDir)bin\</BinDir>
     <BinDir Condition="'$(BinDir)' == ''">$(MSBuildProjectDirectory)\..\bin\</BinDir>
     <SourceDir>$(MSBuildProjectDirectory)\</SourceDir>
+  
+    <!-- Paths to json.xbnf + json.lex -->
+    <JsonXbnfPath>$(SourceDir)json.xbnf</JsonXbnfPath>
+    <JsonLexPath>$(SourceDir)json.lex</JsonLexPath>
+
+    <JsonParserPath>$(SourceDir)JsonParser.cs</JsonParserPath>
+    <JsonLexerPath>$(SourceDir)JsonLexer.cs</JsonLexerPath>
+  
+    <ParsleyDll>&quot;$(ToolsDir)parsley.dll&quot;</ParsleyDll>
+    <ParsleyLuthorDll>&quot;$(ToolsDir)parsley-luthor.dll&quot;</ParsleyLuthorDll>
+
+    <QuotedJsonXbnfPath>&quot;$(JsonXbnfPath)&quot;</QuotedJsonXbnfPath>
+    <QuotedJsonLexPath>&quot;$(JsonLexPath)&quot;</QuotedJsonLexPath>
+    <QuotedJsonParserPath>&quot;$(JsonParserPath)&quot;</QuotedJsonParserPath>
+    <QuotedJsonLexerPath>&quot;$(JsonLexerPath)&quot;</QuotedJsonLexerPath>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -16,20 +31,28 @@
 
 
   <!-- Step 1: grammar -> JsonParser.cs + json.lex -->
-  <Target Name="GenerateJsonParser" BeforeTargets="BeforeBuild" Inputs="$(SourceDir)json.xbnf" Outputs="$(SourceDir)JsonParser.cs;$(SourceDir)json.lex">
-    <Exec Command="dotnet &quot;$(BinDir)parsley.dll&quot; &quot;$(SourceDir)json.xbnf&quot; -s -l &quot;$(SourceDir)json.lex&quot; -o &quot;$(SourceDir)JsonParser.cs&quot;" />
+  <Target 
+    Name="GenerateJsonParser" 
+    BeforeTargets="BeforeBuild" 
+    Inputs="$(JsonXbnfPath)" 
+    Outputs="$(JsonParserPath);$(JsonLexPath)">
+    <Exec Command="dotnet $(ParsleyDll) $(QuotedJsonXbnfPath) -s -l $(QuotedJsonLexPath) -o $(QuotedJsonParserPath)" />
   </Target>
 
   <!-- Step 2: json.lex -> JsonLexer.cs (runs after the parser has produced json.lex) -->
-  <Target Name="GenerateJsonLexer" BeforeTargets="BeforeBuild" DependsOnTargets="GenerateJsonParser" Inputs="$(SourceDir)json.lex" Outputs="$(SourceDir)JsonLexer.cs">
-    <Exec Command="dotnet &quot;$(BinDir)parsley-luthor.dll&quot; &quot;$(SourceDir)json.lex&quot; -n Json -c JsonLexer -o &quot;$(SourceDir)JsonLexer.cs&quot;" />
+  <Target 
+    Name="GenerateJsonLexer" 
+    BeforeTargets="BeforeBuild" 
+    DependsOnTargets="GenerateJsonParser" 
+    Inputs="$(JsonLexPath)" 
+    Outputs="$(JsonLexerPath)">
+    <Exec Command="dotnet $(ParsleyLuthorDll) $(QuotedJsonLexPath) -n Json -c JsonLexer -o $(QuotedJsonLexerPath)" />
   </Target>
 
-  <!-- Step 3: always add the generated files to compilation 
-  <Target Name="IncludeGeneratedJsonSources" BeforeTargets="BeforeBuild" DependsOnTargets="GenerateJsonLexer">
+  <!-- Step 3: always add the generated files to compilation -->
+  <!-- <Target Name="IncludeGeneratedJsonSources" BeforeTargets="BeforeBuild" DependsOnTargets="GenerateJsonLexer">
     <ItemGroup>
-      <Compile Include="$(SourceDir)JsonLexer.cs;$(SourceDir)JsonParser.cs" />
+      <Compile Include="$(JsonLexerPath);$(JsonParserPath)" />
     </ItemGroup>
-  </Target>
-  -->
+  </Target> -->
 </Project>
