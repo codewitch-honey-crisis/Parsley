@@ -105,6 +105,7 @@ namespace Parsley.LanguageServer
                 case "textDocument/prepareRename": return _PrepareRename(p!);
                 case "textDocument/rename": return _Rename(p!);
                 case "textDocument/inlayHint": return _InlayHints(p!);
+                case "parsley/methodNames": return _MethodNames(p!);
                 case "parsley/decisionHints": return _CustomHints(p!);
                 default:
                     // other notifications ($/cancelRequest, settings changes and so on) need nothing
@@ -381,6 +382,36 @@ namespace Parsley.LanguageServer
             .Replace("\n\n", paragraphs ? "\n" : " ");
         #endregion
 
+        #region Method names
+        // the methods synthesized for each production of the grammar, as the synthesizer names them, for a client
+        // that has to find them in generated code: the Visual Studio extension, which puts an action's code in its
+        // EvaluateXxx to give it IntelliSense. So no client works the names out for itself and gets them wrong.
+        //   request:  { "textDocument": { "uri": ... } }
+        //   response: { "rules": { "<rule>": { "parse": "ParseXxx", "evaluate": "EvaluateXxx", "tryParse": "TryParseXxx" } } },
+        //             tryParse only for a shared rule; null when the grammar can't be read
+        JsonNode? _MethodNames(JsonObject p)
+        {
+            var path = _Path(p);
+            var doc = _docs.Get(path);
+            var grammar = doc?.ReadGrammar(_docs.ReadForImport);
+            var methods = doc?.MethodNames(_docs.ReadForImport);
+            if (null == grammar || null == methods) return null;
+            var rules = new JsonObject();
+            foreach (var production in grammar.Productions)
+            {
+                if (rules.ContainsKey(production.Name)) continue;
+                var entry = new JsonObject
+                {
+                    ["parse"] = methods.Parse(production.Name),
+                    ["evaluate"] = methods.Evaluate(production.Name),
+                };
+                if (production.Attributes.IsSet("shared")) entry["tryParse"] = methods.TryParse(production.Name);
+                rules[production.Name] = entry;
+            }
+            return new JsonObject { ["rules"] = rules };
+        }
+        #endregion
+
         #region Navigation
         (Document Doc, Token? Token) _At(JsonObject p)
         {
@@ -448,12 +479,27 @@ namespace Parsley.LanguageServer
             if (_IsRuleName(t)) return t.Text;
             if (t.Role == IdentifierRole.AttributeSymbol) return t.Name;
             if (t.Role == IdentifierRole.CodeEvaluate)
-                return names.IsDefined(doc, t.Name!) ? t.Name : null;
+                return _EvaluatedRule(doc, t.Name!, names);
             if (t.Role == IdentifierRole.CodeName)
                 return !s_actionNames.Contains(t.Name!) && names.IsDefined(doc, t.Name!) ? t.Name : null;
             if (!_IsQuoted(t)) return null;
             return doc.LiteralTargets(_docs.ReadForImport).TryGetValue(t.Start, out var name) ? name : null;
         }
+
+        // the rule EvaluateXxx evaluates, for its Xxx: the production the synthesizer names that method for, which
+        // isn't always the one named Xxx, since foo_bar's is EvaluateFooBar, and when fooBar comes after it,
+        // fooBar's is EvaluateFooBar2. When the grammar can't be read, Xxx itself, if it's defined.
+        string? _EvaluatedRule(Document doc, string stem, Names names)
+        {
+            var methods = doc.MethodNames(_docs.ReadForImport);
+            if (null == methods) return names.IsDefined(doc, stem) ? stem : null;
+            return methods.ProductionFor(stem);
+        }
+
+        // the name a production's methods would have if one production were renamed: the rest can change too, as
+        // a number one of them had may no longer be needed, or the new name may take the one another had
+        static MethodNames _NamesAfterRename(IReadOnlyList<string> productions, string from, string to) =>
+            MethodNames.For(productions.Select(n => n == from ? to : n));
 
         // a "literal" or 'pattern' in a rule that has no declaration of its own
         bool _IsImplicitLiteral(Document doc, Token? t) =>
@@ -597,8 +643,10 @@ namespace Parsley.LanguageServer
         JsonNode? _PrepareRename(JsonObject p)
         {
             var (doc, t) = _At(p);
-            var (_, start, end) = _RenameTarget(doc, t, new Names(this));
-            return new JsonObject { ["range"] = doc.Range(start, end), ["placeholder"] = doc.Text.Substring(start, end - start) };
+            var (target, start, end) = _RenameTarget(doc, t, new Names(this));
+            // the rule's name, which is what's renamed: the Xxx of EvaluateXxx is only made from it
+            var placeholder = target is SymbolTarget st && t!.Role == IdentifierRole.CodeEvaluate ? st.Name : doc.Text.Substring(start, end - start);
+            return new JsonObject { ["range"] = doc.Range(start, end), ["placeholder"] = placeholder };
         }
 
         JsonNode? _Rename(JsonObject p)
@@ -623,23 +671,36 @@ namespace Parsley.LanguageServer
                     if (names.IsDefined(d, newName))
                         throw new RequestFailedException($"\"{newName}\" is already defined{(Documents.PathComparer.Equals(d.Path, doc.Path) ? "" : " in " + Path.GetFileName(d.Path))}");
                 foreach (var d in _Scope(doc, target))
+                {
                     foreach (var tok in d.Scan.AllTokens)
                     {
-                        if (!_Refers(d, tok, target, names) || _IsQuoted(tok)) continue;
-                        switch (tok.Role)
-                        {
-                            case IdentifierRole.CodeName:
-                                // the symbol constant, escaped if its new name is a C# keyword, as the synthesizer writes it
-                                edit(d, tok.Start, tok.End, CSharpScan.IsKeyword(newName) ? "@" + newName : newName);
-                                break;
-                            case IdentifierRole.CodeEvaluate:
-                                edit(d, tok.NameStart, tok.End, newName);
-                                break;
-                            default:
-                                edit(d, tok.Start, tok.End, newName);
-                                break;
-                        }
+                        // EvaluateXxx calls are done below, the target's and any other rule's whose name changes
+                        if (tok.Role == IdentifierRole.CodeEvaluate || !_Refers(d, tok, target, names) || _IsQuoted(tok)) continue;
+                        if (tok.Role == IdentifierRole.CodeName)
+                            // the symbol constant, escaped if its new name is a C# keyword, as the synthesizer writes it
+                            edit(d, tok.Start, tok.End, CSharpScan.IsKeyword(newName) ? "@" + newName : newName);
+                        else
+                            edit(d, tok.Start, tok.End, newName);
                     }
+                    // the methods are named for the rules as the synthesizer names them, so the new name is made an
+                    // identifier, and numbered if it meets another's; and since one rule's number depends on the
+                    // others, every rule's EvaluateXxx whose name changes is changed
+                    var productions = d.ProductionNames(_docs.ReadForImport);
+                    var before = d.MethodNames(_docs.ReadForImport);
+                    var after = null == productions ? null : _NamesAfterRename(productions, st.Name, newName);
+                    foreach (var tok in d.Scan.AllTokens)
+                    {
+                        if (tok.Role != IdentifierRole.CodeEvaluate) continue;
+                        var rule = _SymbolName(d, tok, names);
+                        if (null == rule) continue;
+                        var renamed = rule == st.Name ? newName : rule;
+                        string? stem;
+                        if (null != after && null != before) stem = after.Stems.TryGetValue(renamed, out var s) ? s : null;
+                        // a grammar that can't be read: the target's calls get its new name as the synthesizer makes it
+                        else stem = rule == st.Name ? MethodNames.For(new[] { newName }).Stem(newName) : null;
+                        if (null != stem && stem != tok.Name) edit(d, tok.NameStart, tok.End, stem);
+                    }
+                }
             }
             else if (target is LocalTarget lt)
             {

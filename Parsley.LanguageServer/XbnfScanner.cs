@@ -29,7 +29,7 @@ namespace Parsley.LanguageServer
         AttributeValue, // <... = name>
         AttributeSymbol,// a terminal's name in on=, after= or sync=, alone or in a "list"
         CodeName,       // a name in a semantic action that isn't a local or a member: maybe a symbol constant
-        CodeEvaluate,   // EvaluateXxx in a semantic action, for the rule Xxx
+        CodeEvaluate,   // EvaluateXxx in a semantic action, for the rule whose methods are named for Xxx: Expr, or foo_bar for FooBar
         CodeMember,     // a name after a dot in a semantic action
         CodeLocal,      // a local a semantic action declares, or a use of one
     }
@@ -53,7 +53,9 @@ namespace Parsley.LanguageServer
         public int EqualsAt { get; set; } = -1;
         /// <summary>
         /// For a name inside an action or an attribute's value: the name it stands for, such as Expr for EvaluateExpr,
-        /// or x for @x. Null for the tokens of the grammar itself, whose name is their text.
+        /// or x for @x. Null for the tokens of the grammar itself, whose name is their text. For EvaluateXxx it's the
+        /// Xxx as written, which is the rule's name made into an identifier, so FooBar for foo_bar: the language
+        /// server finds the rule from it as the synthesizer names its methods.
         /// </summary>
         public string? Name { get; set; }
         /// <summary>

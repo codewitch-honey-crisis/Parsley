@@ -130,6 +130,120 @@ namespace Parsley.Tests
 			T.Check(h.Accepts("e c += x while 5"), "accepts");
 		}
 
+		public static void LineBreaksInLiteralsStillCompile()
+		{
+			// every character C# ends a line at, named and inline, escaped and raw: none may end a comment or a string in the code
+			var h = _Build("breaks",
+				"Lines= { Line }; Line= w { sp w } ( lf | crlf | '\u2028' | ps | nel | \"\\r\" ); w='[a-z]+'; sp=\" \";" +
+				"lf=\"\\n\"; crlf=\"\\r\\n\"; ps=\"\\u2029\"; nel=\"\\u0085\";");
+			T.Check(h.Accepts("ab cd\nef\r\ngh\u2028ij\u2029kl\u0085mn\r"), "accepts each line break");
+			T.Check(!h.Accepts("ab"), "rejects a line with no break");
+		}
+
+		public static void ProductionNamesThatMeetStillCompile()
+		{
+			// foo_bar and fooBar are both FooBar as identifiers; A's 11th decision and A1's 1st are both A11
+			const string xbnf =
+				"S<start, type=\"int\">= foo_bar | fooBar | A | A1 => { return node.Children[0].Symbol == \"A\" || node.Children[0].Symbol == \"A1\" ? 0 : (int)Evaluate(node.Children[0]); };" +
+				"foo_bar<shared, type=\"int\">= a b => { return 1; };" +
+				"fooBar<shared, type=\"int\">= c d => { return 2; };" +
+				"A= y [k] [k] [k] [k] [k] [k] [k] [k] [k] [k] ( u v | u w ); A1= x ( u v | u w );" +
+				"a=\"a\"; b=\"b\"; c=\"c\"; d=\"d\"; k=\"k\"; u=\"u\"; v=\"v\"; w=\"w\"; x=\"x\"; y=\"y\";" + Ws;
+			var h = _Build("meet", xbnf, ParserEngine.LLk);
+			T.Check(h.Accepts("a b") && h.Accepts("c d") && h.Accepts("y k u w") && h.Accepts("x u v"), "accepts");
+			T.Check(h.Parse("c d").Tree.Contains("fooBar"), "fooBar parses as fooBar, not foo_bar");
+			T.Equal((object)1, h.Parser.Evaluate("MeetEvaluator", h.Lexer.Tokenize("a b")), "foo_bar evaluates with its own action");
+			T.Equal((object)2, h.Parser.Evaluate("MeetEvaluator", h.Lexer.Tokenize("c d")), "fooBar evaluates with its own action");
+			// the second keeps working under another name, so the first, which could be called from other code, keeps its own
+			var messages = CSharpSynthesizer.CheckNames(h.Analysis);
+			T.Equal(1, messages.Count, "a warning for the one production renamed: " + string.Join("; ", messages));
+			T.Check(messages.All(m => ErrorLevel.Warning == m.Level && m.Message.Contains("fooBar") && m.Message.Contains("FooBar2") && 0 < m.Line), "it's a warning, naming the production, its new name and where it is");
+		}
+
+		// the line breaks C# reads, other than the \r\n and \n the code's own lines end with
+		static bool _HasStrayLineBreak(string source) =>
+			source.Replace("\r\n", "\n").IndexOfAny(new[] { '\r', '\u0085', '\u2028', '\u2029' }) >= 0;
+
+		public static void LineBreaksInLiteralsCompileWithEveryEngine()
+		{
+			const string xbnf =
+				"Lines= { Line }; Line= w { sp w } ( lf | crlf | '\u2028' | ps | nel | \"\\r\" ); w='[a-z]+'; sp=\" \";" +
+				"lf=\"\\n\"; crlf=\"\\r\\n\"; ps=\"\\u2029\"; nel=\"\\u0085\";";
+			foreach (var engine in new[] { ParserEngine.LL1, ParserEngine.LLk, ParserEngine.AllStar })
+			{
+				var h = _Build("breaks" + engine, xbnf, engine);
+				T.Check(h.Accepts("ab cd\nef\r\ngh\u2028ij\u2029kl\u0085mn\r"), engine + " accepts each line break");
+				T.Check(!_HasStrayLineBreak(h.Source), engine + " writes no line break but those that end its lines");
+			}
+		}
+
+		public static void LiteralCommentsShowTheEscapedText()
+		{
+			var h = _Build("shown", "S= { lf | q | tab | bell }; lf=\"\\n\"; q=\"\\\"x\\\"\"; tab=\"\\t\"; bell=\"\\u0007\";");
+			T.Check(h.Source.Contains("public const int lf = ") && h.Source.Contains("; // \"\\n\""), "lf's comment reads \"\\n\", not a blank");
+			T.Check(h.Source.Contains("; // \"\\\"x\\\"\""), "a quote in a literal is escaped in its comment");
+			T.Check(h.Source.Contains("; // \"\\t\""), "a tab reads \\t");
+			T.Check(h.Source.Contains("; // \"\\u0007\""), "another control character reads as a \\u escape");
+			T.Check(h.Accepts("\n\"x\"\t\u0007"), "and the parser still takes them");
+		}
+
+		public static void LiteralsWithControlCharactersReadBackTheSame()
+		{
+			// what the grammar writes for these literals has to read back as the same literal, on one line
+			var chars = new[] { '\u0001', '\u001B', '\u007F', '\u0085', '\u2028', '\u2029', '\t', '\n', '\r', '"', '\\' };
+			var decls = string.Join(" ", chars.Select((c, i) => $"t{i}=\"\\u{(int)c:X4}\";"));
+			var g = Grammar.Parse("S= { " + string.Join(" | ", chars.Select((c, i) => "t" + i)) + " }; " + decls, "control.xbnf");
+			var written = XbnfWriter.Write(g);
+			T.Check(!_HasStrayLineBreak(written), "the literals are written without raw line breaks");
+			var again = Grammar.Parse(written, "control-again.xbnf");
+			for (var i = 0; i < chars.Length; ++i)
+			{
+				var expected = chars[i].ToString();
+				T.Equal(expected, g.Terminals.First(t => t.Name == "t" + i).Literal, $"t{i} reads as U+{(int)chars[i]:X4}");
+				T.Equal(expected, again.Terminals.First(t => t.Name == "t" + i).Literal, $"t{i} reads back as U+{(int)chars[i]:X4}");
+			}
+		}
+
+		public static void RenamedMethodsDontTakeAnotherProductionsName()
+		{
+			// fooBar can't be FooBar, but FooBar2 is another production's own name, so it's FooBar3, and FooBar2 keeps its name
+			const string xbnf =
+				"S<start, type=\"int\">= foo_bar | fooBar | FooBar2 => { return (int)Evaluate(node.Children[0]); };" +
+				"foo_bar<shared, type=\"int\">= a b => { return 1; };" +
+				"fooBar<shared, type=\"int\">= c d => { return 2; };" +
+				"FooBar2<shared, type=\"int\">= e f => { return 3; };" +
+				"a=\"a\"; b=\"b\"; c=\"c\"; d=\"d\"; e=\"e\"; f=\"f\";" + Ws;
+			foreach (var engine in new[] { ParserEngine.LL1, ParserEngine.AllStar })
+			{
+				var name = "taken" + engine;
+				var h = _Build(name, xbnf, engine);
+				var evaluator = char.ToUpperInvariant(name[0]) + name.Substring(1) + "Evaluator";
+				T.Equal((object)1, h.Parser.Evaluate(evaluator, h.Lexer.Tokenize("a b")), engine + ": foo_bar evaluates with its own action");
+				T.Equal((object)2, h.Parser.Evaluate(evaluator, h.Lexer.Tokenize("c d")), engine + ": fooBar evaluates with its own action");
+				T.Equal((object)3, h.Parser.Evaluate(evaluator, h.Lexer.Tokenize("e f")), engine + ": FooBar2 evaluates with its own action");
+				T.Check(h.Source.Contains(" TryParseFooBar(") && h.Source.Contains(" TryParseFooBar2(") && h.Source.Contains(" TryParseFooBar3("), engine + ": each has its own TryParse");
+				var messages = CSharpSynthesizer.CheckNames(h.Analysis);
+				T.Equal(1, messages.Count, engine + ": only fooBar is renamed: " + string.Join("; ", messages));
+				T.Check(messages.All(m => m.Message.Contains("fooBar") && m.Message.Contains("FooBar3")), engine + ": fooBar's methods are named for FooBar3");
+			}
+		}
+
+		public static void NumbersAfterADigitAreSetApart()
+		{
+			// A_1 meets A1, and a plain number would make it A12, which is another production's own name. A_1 is A1_2.
+			const string xbnf =
+				"S= A1 | A_1 | A12;" +
+				"A1= x [k] ( u v | u w ); A_1= y [k] ( u v | u w ); A12= z [k] ( u v | u w );" +
+				"k=\"k\"; u=\"u\"; v=\"v\"; w=\"w\"; x=\"x\"; y=\"y\"; z=\"z\";" + Ws;
+			var h = _Build("digits", xbnf, ParserEngine.LLk);
+			T.Check(h.Accepts("x u v") && h.Accepts("y k u w") && h.Accepts("z u w"), "accepts");
+			T.Check(h.Parse("y u v").Tree.Contains("A_1"), "A_1 parses as A_1");
+			T.Check(h.Source.Contains(" ParseA1(") && h.Source.Contains(" ParseA1_2(") && h.Source.Contains(" ParseA12("), "A1 and A12 keep their names");
+			var messages = CSharpSynthesizer.CheckNames(h.Analysis);
+			T.Equal(1, messages.Count, "only A_1 is renamed: " + string.Join("; ", messages));
+			T.Check(messages.All(m => m.Message.Contains("A_1") && m.Message.Contains("A1_2")), "A_1's methods are named for A1_2");
+		}
+
 		public static void FailedPredictionsReportWhereTheInputGoesWrong()
 		{
 			// a^n b^n or a^n b^2n: only the number of b's says which, so no fixed lookahead decides it

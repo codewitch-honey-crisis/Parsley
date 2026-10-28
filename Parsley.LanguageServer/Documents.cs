@@ -41,6 +41,40 @@ namespace Parsley.LanguageServer
         bool _grammarRead;
 
         /// <summary>
+        /// The productions' names, in the order the reader has them, with what imports add where it adds it, which
+        /// decides the names their methods get. Null if the grammar couldn't be read.
+        /// </summary>
+        public IReadOnlyList<string>? ProductionNames(Func<string, string> readFile)
+        {
+            if (null == _productionNames)
+            {
+                var g = ReadGrammar(readFile);
+                if (null == g) return null;
+                var names = new List<string>();
+                foreach (var p in g.Productions) names.Add(p.Name);
+                _productionNames = names;
+            }
+            return _productionNames;
+        }
+        List<string>? _productionNames;
+
+        /// <summary>
+        /// The names of the productions' methods, as in EvaluateXxx, as the synthesizer names them. Built once per
+        /// version, when first asked for; null if the grammar couldn't be read.
+        /// </summary>
+        public Parsley.MethodNames? MethodNames(Func<string, string> readFile)
+        {
+            if (null == _methodNames)
+            {
+                var names = ProductionNames(readFile);
+                if (null == names) return null;
+                _methodNames = Parsley.MethodNames.For(names);
+            }
+            return _methodNames;
+        }
+        Parsley.MethodNames? _methodNames;
+
+        /// <summary>
         /// The terminal each "literal" or 'pattern' used in a rule of this document stands for, by the offset of its
         /// token: the declared terminal it resolves to, as the reader resolves it, or null when it has no declaration
         /// and so is an implicit terminal of its own. Built once per version, when first asked for; empty if the

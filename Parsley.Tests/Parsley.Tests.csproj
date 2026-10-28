@@ -25,4 +25,9 @@
     <None Include="c99\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- the language server, but for its entry point, so LanguageServerTests can talk to it in memory -->
+    <Compile Include="..\Parsley.LanguageServer\*.cs" Exclude="..\Parsley.LanguageServer\Program.cs" LinkBase="LanguageServer" />
+  </ItemGroup>
+
 </Project>

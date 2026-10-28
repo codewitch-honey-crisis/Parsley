@@ -52,7 +52,15 @@ namespace Parsley
 							case '\n': sb.Append("\\n"); break;
 							case '\r': sb.Append("\\r"); break;
 							case '\t': sb.Append("\\t"); break;
-							default: sb.Append(ch); break;
+							// the rest of the control characters, and the line breaks C# reads that aren't control characters,
+							// so the value is still one line in XBNF and in C#
+							case '\u2028':
+							case '\u2029':
+								sb.Append("\\u").Append(((int)ch).ToString("X4")); break;
+							default:
+								if (char.IsControl(ch)) sb.Append("\\u").Append(((int)ch).ToString("X4"));
+								else sb.Append(ch);
+								break;
 						}
 					}
 					sb.Append('"');

@@ -382,7 +382,9 @@ namespace Parsley.Generator
             var names = new HashSet<string>(reserved);
             foreach (var x in externals) names.Add(x.Alias);
             foreach (var l in groupLexers.Values) names.Add(l);
-            foreach (var p in g.SharedProductions) names.Add("TryParse" + p.Name);
+            // the containing class gets a TryParseXxx for each shared production, named as the parser's are
+            var methods = MethodNames.For(g);
+            foreach (var p in g.SharedProductions) names.Add(methods.TryParse(p.Name));
             var parser = CSharpSynthesizer.SynthesizeParser(analysis, new SynthesisOptions
             {
                 ClassName = ParserName,
@@ -665,7 +667,7 @@ namespace Parsley.Generator
             foreach (var entry in parser.SharedEntries)
             {
                 line("/// <summary>");
-                line($"/// Parses one {entry.Substring("TryParse".Length)} from tokens, as an island of another grammar. Returns false when there were problems.");
+                line($"/// Parses one {entry.Substring(MethodNames.TryParsePrefix.Length)} from tokens, as an island of another grammar. Returns false when there were problems.");
                 line("/// </summary>");
                 line($"public static bool {entry}({tokens} tokens, out {node} result, out {errorList} errors) => {ParserName}.{entry}(tokens, out result, out errors);");
             }

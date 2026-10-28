@@ -61,6 +61,8 @@
     <Compile Include="XbnfContentDefinition.cs" />
     <Compile Include="XbnfLanguageClient.cs" />
     <Compile Include="DecisionHintService.cs" />
+    <!-- the names of the methods synthesized for each rule, from the language server -->
+    <Compile Include="MethodNameService.cs" />
     <Compile Include="DecisionGlyphs.cs" />
     <!-- C# completion and quick info in semantic actions, from Visual Studio's C# workspace -->
     <Compile Include="ActionCode.cs" />

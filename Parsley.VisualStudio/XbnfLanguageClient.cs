@@ -72,6 +72,7 @@ namespace Parsley.VisualStudio
         public Task AttachForCustomMessageAsync(JsonRpc rpc)
         {
             DecisionHintService.Attach(rpc);
+            MethodNameService.Attach(rpc);
             return Task.CompletedTask;
         }
         #endregion

@@ -2,7 +2,7 @@
   "name": "parsley-xbnf-lsp",
   "displayName": "Parsley XBNF Language Provider",
   "description": "Highlighting and language support for Parsley's XBNF grammars: go to definition, find references, completion, hover and diagnostics.",
-  "version": "4.1.0",
+  "version": "4.1.1",
   "publisher": "honey-the-codewitch",
   "license": "SEE LICENSE IN LICENSE.txt",
   "repository": { "type": "git", "url": "https://github.com/codewitch-honey-crisis/Parsley" },

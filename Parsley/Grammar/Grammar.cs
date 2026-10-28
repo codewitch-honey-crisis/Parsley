@@ -410,16 +410,8 @@ namespace Parsley
 		string? _NameFromFile(string suffix)
 		{
 			if (string.IsNullOrEmpty(Filename)) return null;
-			var sb = new StringBuilder();
-			var upper = true;
-			foreach (var ch in Path.GetFileNameWithoutExtension(Filename))
-			{
-				if (!char.IsLetterOrDigit(ch)) { upper = true; continue; }
-				if (0 == sb.Length && char.IsDigit(ch)) sb.Append('_');
-				sb.Append(upper ? char.ToUpperInvariant(ch) : ch);
-				upper = false;
-			}
-			return sb.Append(suffix).ToString();
+			// made an identifier the way the productions' method names are
+			return MethodNames.IdentifierOrEmpty(Path.GetFileNameWithoutExtension(Filename)) + suffix;
 		}
 		/// <summary>
 		/// The namespace to synthesize the parser in: what comes before the last dot of the @class directive, as in

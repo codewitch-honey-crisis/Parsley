@@ -185,6 +185,9 @@ namespace Parsley.VisualStudio
                 .OrderBy(p => _IsUnder(dir, Path.GetDirectoryName(p.FilePath ?? "") ?? "") ? 0 : 1)
                 .ToList();
             var name = Path.GetFileName(grammarPath);
+            // the rule's EvaluateXxx, as the language server says the synthesizer names it; null while it can't say,
+            // and then any of the grammar's Evaluate methods will do
+            var evaluate = await MethodNameService.GetEvaluateNameAsync(grammarPath, site.Rule, ct).ConfigureAwait(false);
             foreach (var project in projects)
             {
                 ct.ThrowIfCancellationRequested();
@@ -194,7 +197,7 @@ namespace Parsley.VisualStudio
                     var text = await d.GetTextAsync(ct).ConfigureAwait(false);
                     if (!_Mentions(text, name)) continue;
                     var root = await d.GetSyntaxRootAsync(ct).ConfigureAwait(false);
-                    var host = null == root ? null : _FindHost(root, grammarPath, Path.GetDirectoryName(d.FilePath ?? "") ?? "", site.Rule);
+                    var host = null == root ? null : _FindHost(root, grammarPath, Path.GetDirectoryName(d.FilePath ?? "") ?? "", evaluate);
                     if (null == host) continue;
                     return await _EntryAsync(solution, project, d.Id, text.ToString(), host.Body!, structure, ct).ConfigureAwait(false);
                 }
@@ -206,7 +209,7 @@ namespace Parsley.VisualStudio
                     var text = await g.GetTextAsync(ct).ConfigureAwait(false);
                     if (!_Mentions(text, name)) continue;
                     var root = await g.GetSyntaxRootAsync(ct).ConfigureAwait(false);
-                    var host = null == root ? null : _FindHost(root, grammarPath, "", site.Rule);
+                    var host = null == root ? null : _FindHost(root, grammarPath, "", evaluate);
                     if (null == host) continue;
                     return await _FromGeneratorAsync(solution, project, generated, g, text.ToString(), host.Body!, structure, ct).ConfigureAwait(false);
                 }
@@ -279,13 +282,12 @@ namespace Parsley.VisualStudio
         }
 
         /// <summary>
-        /// The method whose body the action goes in: the rule's Evaluate method in a class with code mapped to the
-        /// grammar, or, for a rule that had no action when the code was generated, another method of that class,
-        /// so the action still sees the evaluator's members
+        /// The method whose body the action goes in: the rule's Evaluate method, named <paramref name="name"/>, in a
+        /// class with code mapped to the grammar, or, for a rule that had no action when the code was generated or
+        /// when the name isn't known, another method of that class, so the action still sees the evaluator's members
         /// </summary>
-        static MethodDeclarationSyntax? _FindHost(SyntaxNode root, string grammarPath, string docDir, string rule)
+        static MethodDeclarationSyntax? _FindHost(SyntaxNode root, string grammarPath, string docDir, string? name)
         {
-            var name = _EvaluateName(rule);
             MethodDeclarationSyntax? fallback = null;
             foreach (var type in root.DescendantNodes().OfType<TypeDeclarationSyntax>())
             {
@@ -296,7 +298,7 @@ namespace Parsley.VisualStudio
                 if (0 == methods.Count) continue;
                 var mapped = methods.Where(m => _MapsTo(m, grammarPath, docDir)).ToList();
                 if (0 == mapped.Count) continue;
-                var exact = methods.FirstOrDefault(m => m.Identifier.ValueText == name);
+                var exact = null == name ? null : methods.FirstOrDefault(m => m.Identifier.ValueText == name);
                 if (null != exact) return exact;
                 fallback ??= mapped.FirstOrDefault(m => m.Identifier.ValueText.StartsWith("Evaluate", StringComparison.Ordinal) && m.Identifier.ValueText != "Evaluate");
             }
@@ -315,24 +317,6 @@ namespace Parsley.VisualStudio
                 if (_SamePath(full, grammarPath)) return true;
             }
             return false;
-        }
-
-        // as the synthesizer names them: each run of letters and digits capitalized, everything else dropped
-        static string _EvaluateName(string rule)
-        {
-            var sb = new StringBuilder("Evaluate");
-            var upper = true;
-            var any = false;
-            foreach (var ch in rule)
-            {
-                if (!char.IsLetterOrDigit(ch)) { upper = true; continue; }
-                if (!any && char.IsDigit(ch)) sb.Append('_');
-                sb.Append(upper ? char.ToUpperInvariant(ch) : ch);
-                upper = false;
-                any = true;
-            }
-            if (!any) sb.Append("Symbol");
-            return sb.ToString();
         }
 
         static string? _Full(string? path)

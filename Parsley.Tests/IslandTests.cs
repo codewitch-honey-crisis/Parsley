@@ -85,7 +85,28 @@ namespace Parsley.Tests
 			text= '""[^""\n]*""';
 			ws<hidden>= '[ \t\r\n]+';";
 
-		static readonly Dictionary<string, string> s_files = new() { ["inner.xbnf"] = Inner, ["outer.xbnf"] = Outer, ["quoted.xbnf"] = QuotedInner, ["quoted-outer.xbnf"] = QuotedOuter, ["dispatch-outer.xbnf"] = DispatchOuter };
+		// a quoted island whose shared productions' names meet as identifiers: phrase_x's entry is TryParsePhraseX2
+		const string MeetInner = @"
+			@class ""QuotedParser"";
+			phraseX<shared>= quote quote;
+			phrase_x<shared>= quote { word } quote;
+			quote= '""';
+			word= '[a-z]+';
+			ws<hidden>= '[ \t]+';";
+		const string MeetOuter = @"
+			@class ""OuterParser"";
+			@external Q ""meet.xbnf"";
+			@lexer ""OuterLexer"";
+			@lexer Q ""QuotedLexer"";
+			Script<start>= { Say };
+			Say= ""say"" Words text "";"";
+			Words<entry=""Q.phrase_x"", after=""sayKeyword"", nest=""Q.quote"", pop=""Q.quote"">;
+			sayKeyword= ""say"";
+			semi= "";"";
+			text= '""[^""\n]*""';
+			ws<hidden>= '[ \t\r\n]+';";
+
+		static readonly Dictionary<string, string> s_files = new() { ["inner.xbnf"] = Inner, ["outer.xbnf"] = Outer, ["quoted.xbnf"] = QuotedInner, ["quoted-outer.xbnf"] = QuotedOuter, ["dispatch-outer.xbnf"] = DispatchOuter, ["meet.xbnf"] = MeetInner, ["meet-outer.xbnf"] = MeetOuter };
 		static string _Read(string path) => s_files.TryGetValue(Path.GetFileName(path), out var t) ? t : throw new FileNotFoundException(path);
 		static string _Path(string name) => Path.Combine(Path.GetTempPath(), "islands", name);
 
@@ -331,6 +352,24 @@ namespace Parsley.Tests
 			// a missing closing quote: the island's lexer can't read the ;, so the island ends there
 			_Run(p, "say \"a b ; say \"c\" \"d\";", out errors);
 			T.Check(0 < errors.Count, "an unterminated quote is an error");
+		}
+
+		public static void IslandEntriesWhoseNamesMeet()
+		{
+			var outer = GrammarAnalysis.Analyze(_Grammar("meet-outer.xbnf"));
+			GrammarException.ThrowIfErrors(outer.Messages);
+			var inner = GrammarAnalysis.Analyze(_Grammar("meet.xbnf"));
+			GrammarException.ThrowIfErrors(inner.Messages);
+			var p = CompiledParser.Compile(CSharpSynthesizer.Synthesize(outer), "OuterParser",
+				CSharpSynthesizer.Synthesize(inner),
+				Lexing,
+				_Lexer("OuterLexer", outer.Grammar.Terminals.Where(t => t.IsLexed)),
+				_Lexer("QuotedLexer", inner.Grammar.Terminals.Where(t => t.IsLexed)),
+				Driver);
+			// phraseX takes no words, so words between the quotes parse only if the island is parsed as phrase_x
+			var tree = _Run(p, "say \"a b\" \"x\";", out var errors);
+			T.Equal(0, errors.Count, "the island is parsed by phrase_x: " + string.Join("; ", errors));
+			T.Equal(2, tree.Replace("\r\n", "\n").Split('\n').Count(l => l.Trim().StartsWith("word ")), "and holds its words");
 		}
 
 		public static void IslandsStartWith()

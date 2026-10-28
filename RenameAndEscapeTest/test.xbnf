@@ -1,0 +1,69 @@
+// fixcheck.xbnf: a small grammar that exercises the fixes for PR #2.
+//
+// Each line of input is one item and a line break. Evaluating returns the sum of the items' values:
+// foo_bar=1, fooBar=2, FooBar2=3, A1=4, A_1=5, A12=6, A=7, bell=8, quoted=9.
+//
+//   fb\n  fB\r\n  FB2\u2028  x u v\u2029  z u w\u0085  q u v\r  y k2 k7 u w\n  \u0007\n  "hi"\n   evaluates to 45
+//
+// 1. Literals holding line breaks and control characters (lf, crlf, ls, ps, nel, cr, bell, quoted).
+//    Before the fix the parser didn't compile (CS1010). Now the symbol constants' comments read
+//    // "\n", // "\u2028", // "\u0007", // "\"hi\"" and so on.
+// 2. Rules whose methods meet: foo_bar and fooBar are both FooBar, so fooBar's methods are FooBar3,
+//    skipping FooBar2, which is the rule FooBar2's own name. A_1 meets A1 and is A1_2, not A12, which is
+//    A12's own. There's a warning for fooBar and one for A_1, and no others.
+// 3. Predictors: A's 11th decision and A1's 1st were both PredictA11. Now A1's is PredictA1_1.
+// 4. Shared rules get TryParseFooBar, TryParseFooBar3 and TryParseFooBar2, one each.
+// 5. Language server, in Item's action below:
+//    - go to definition on each EvaluateXxx lands on the rule named in the comment after it
+//    - find references on fooBar includes EvaluateFooBar3 and not EvaluateFooBar
+//    - rename foo_bar to first: EvaluateFooBar becomes EvaluateFirst, and fooBar's EvaluateFooBar3
+//      becomes EvaluateFooBar, since nothing else is FooBar now
+//    - rename A12 to a_twelve: EvaluateA12 becomes EvaluateATwelve, not Evaluatea_twelve
+//    - start a rename on EvaluateFooBar3: it offers "fooBar"
+//    - hover on EvaluateA1_2 is about A_1
+
+Program<start, type="int">= { Line } => {
+	var sum = 0;
+	foreach (var c in node.Children) sum += EvaluateLine(c);
+	return sum;
+};
+Line<type="int">= Item Break => { return EvaluateItem(node.Children[0]); };
+Item<type="int">= foo_bar | fooBar | FooBar2 | A1 | A_1 | A12 | A | bell | quoted => {
+	var c = node.Children[0];
+	// the symbol constants, which a rename changes along with the rules, unlike strings
+	switch (c.SymbolId)
+	{
+		case foo_bar: return EvaluateFooBar(c);   // foo_bar
+		case fooBar: return EvaluateFooBar3(c);   // fooBar
+		case FooBar2: return EvaluateFooBar2(c);  // FooBar2
+		case A1: return EvaluateA1(c);            // A1
+		case A_1: return EvaluateA1_2(c);         // A_1
+		case A12: return EvaluateA12(c);          // A12
+		case A: return EvaluateA(c);              // A
+		case bell: return 8;
+		default: return 9;
+	}
+};
+
+foo_bar<shared, type="int">= "fb" => { return 1; };
+fooBar<shared, type="int">= "fB" => { return 2; };
+FooBar2<shared, type="int">= "FB2" => { return 3; };
+
+// each needs two tokens to choose, so each gets a predictor
+A1<type="int">= "x" ( "u" "v" | "u" "w" ) => { return 4; };
+A_1<type="int">= "z" ( "u" "v" | "u" "w" ) => { return 5; };
+A12<type="int">= "q" ( "u" "v" | "u" "w" ) => { return 6; };
+// ten optionals, each with its own token so the grammar stays LL(k), and an alternation: eleven decisions,
+// so its 11th predictor is PredictA11
+A<type="int">= "y" ["k0"] ["k1"] ["k2"] ["k3"] ["k4"] ["k5"] ["k6"] ["k7"] ["k8"] ["k9"] ( "u" "v" | "u" "w" ) => { return 7; };
+
+Break= lf | crlf | ls | ps | nel | cr;
+lf= "\n";
+crlf= "\r\n";
+ls= "\u2028";
+ps= "\u2029";
+nel= "\u0085";
+cr= "\r";
+bell= "\u0007";
+quoted= "\"hi\"";
+ws<hidden>= '[ \t]+';
