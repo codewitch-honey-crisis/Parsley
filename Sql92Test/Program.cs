@@ -7,7 +7,7 @@ namespace Sql92Test
         // the error reporting.
         static readonly string[] Statements =
         {
-            "SELECT * FROM employees",
+            "select * FROM employees",
 
             "SELECT e.name, e.salary AS pay\n" +
             "FROM employees e\n" +

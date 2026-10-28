@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
   <Metadata>
-    <Identity Id="Parsley.VisualStudio.8bf67476-aa11-4394-9930-66b18aaf44a4" Version="4.0.1" Language="en-US" Publisher="Dana John" />
+    <Identity Id="Parsley.VisualStudio.8bf67476-aa11-4394-9930-66b18aaf44a4" Version="4.1.0" Language="en-US" Publisher="Dana John" />
     <DisplayName>Parsley XBNF</DisplayName>
     <Description xml:space="preserve">Syntax highlighting and language support for Parsley's XBNF grammars: go to definition, find references, completion, hover, and the grammar's errors and warnings.</Description>
     <MoreInfo>https://github.com/codewitch-honey-crisis/Parsley/</MoreInfo>

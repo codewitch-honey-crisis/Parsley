@@ -11,8 +11,9 @@
 //
 // What the parser expects:
 // - One query, optionally ending with ;.
-// - Keywords in any case: each keyword's pattern starts with (?i). The reserved words this grammar
-//   doesn't use are one terminal, reserved_word, so that, as in SQL-92, they can't be identifiers.
+// - Keywords in any case: @ignoreCase makes every terminal match letters in either case. The reserved
+//   words this grammar doesn't use are one terminal, reserved_word, so that, as in SQL-92, they can't
+//   be identifiers.
 // - Host parameters (:name, optionally followed by [INDICATOR] :name) and dynamic parameters (?).
 // - Comments: -- to the end of the line, and /* */. (The block comment is an extension: it came in
 //   SQL:1999.)
@@ -40,6 +41,9 @@
 // The tree is kept small: dispatch rules, lists and keyword groups are collapsed, so their children
 // land in the enclosing node; , ; ( ) and . are left out. The precedence levels of value expressions
 // and search conditions are operator rules, so each operator applied makes a node.
+
+// SQL is case-insensitive: keywords and identifiers alike can be written in any case
+@ignoreCase true;
 
 // 20.1 Direct SQL: the query, with the ORDER BY that only the outermost query can have
 
@@ -259,135 +263,135 @@ interval_literal= INTERVAL [ "+" | "-" ] character_string_literal interval_quali
 
 // 5.2 Keywords, in any case. Declared ahead of the identifiers so a keyword wins the tie.
 
-ALL= '(?i)all';
-AND= '(?i)and';
-ANY= '(?i)any';
-AS= '(?i)as';
-ASC= '(?i)asc';
-AT= '(?i)at';
-AVG= '(?i)avg';
-BETWEEN= '(?i)between';
-BIT= '(?i)bit';
-BIT_LENGTH= '(?i)bit_length';
-BOTH= '(?i)both';
-BY= '(?i)by';
-CASE= '(?i)case';
-CAST= '(?i)cast';
-CHAR= '(?i)char';
-CHARACTER= '(?i)character';
-CHAR_LENGTH= '(?i)char_length';
-CHARACTER_LENGTH= '(?i)character_length';
-COALESCE= '(?i)coalesce';
-COLLATE= '(?i)collate';
-CONVERT= '(?i)convert';
-CORRESPONDING= '(?i)corresponding';
-COUNT= '(?i)count';
-CROSS= '(?i)cross';
-CURRENT_DATE= '(?i)current_date';
-CURRENT_TIME= '(?i)current_time';
-CURRENT_TIMESTAMP= '(?i)current_timestamp';
-CURRENT_USER= '(?i)current_user';
-DATE= '(?i)date';
-DAY= '(?i)day';
-DEC= '(?i)dec';
-DECIMAL= '(?i)decimal';
-DEFAULT= '(?i)default';
-DESC= '(?i)desc';
-DISTINCT= '(?i)distinct';
-DOUBLE= '(?i)double';
-ELSE= '(?i)else';
-END= '(?i)end';
-ESCAPE= '(?i)escape';
-EXCEPT= '(?i)except';
-EXISTS= '(?i)exists';
-EXTRACT= '(?i)extract';
-FALSE= '(?i)false';
-FLOAT= '(?i)float';
-FOR= '(?i)for';
-FROM= '(?i)from';
-FULL= '(?i)full';
-GROUP= '(?i)group';
-HAVING= '(?i)having';
-HOUR= '(?i)hour';
-IN= '(?i)in';
-INDICATOR= '(?i)indicator';
-INNER= '(?i)inner';
-INT= '(?i)int';
-INTEGER= '(?i)integer';
-INTERSECT= '(?i)intersect';
-INTERVAL= '(?i)interval';
-IS= '(?i)is';
-JOIN= '(?i)join';
-LEADING= '(?i)leading';
-LEFT= '(?i)left';
-LIKE= '(?i)like';
-LOCAL= '(?i)local';
-LOWER= '(?i)lower';
-MATCH= '(?i)match';
-MAX= '(?i)max';
-MIN= '(?i)min';
-MINUTE= '(?i)minute';
-MONTH= '(?i)month';
-NATIONAL= '(?i)national';
-NATURAL= '(?i)natural';
-NCHAR= '(?i)nchar';
-NOT= '(?i)not';
-NULL= '(?i)null';
-NULLIF= '(?i)nullif';
-NUMERIC= '(?i)numeric';
-OCTET_LENGTH= '(?i)octet_length';
-ON= '(?i)on';
-OR= '(?i)or';
-ORDER= '(?i)order';
-OUTER= '(?i)outer';
-OVERLAPS= '(?i)overlaps';
-PARTIAL= '(?i)partial';
-POSITION= '(?i)position';
-PRECISION= '(?i)precision';
-REAL= '(?i)real';
-RIGHT= '(?i)right';
-SECOND= '(?i)second';
-SELECT= '(?i)select';
-SESSION_USER= '(?i)session_user';
-SET= '(?i)set';
-SMALLINT= '(?i)smallint';
-SOME= '(?i)some';
-SUBSTRING= '(?i)substring';
-SUM= '(?i)sum';
-SYSTEM_USER= '(?i)system_user';
-TABLE= '(?i)table';
-THEN= '(?i)then';
-TIME= '(?i)time';
-TIMESTAMP= '(?i)timestamp';
-TIMEZONE_HOUR= '(?i)timezone_hour';
-TIMEZONE_MINUTE= '(?i)timezone_minute';
-TO= '(?i)to';
-TRAILING= '(?i)trailing';
-TRANSLATE= '(?i)translate';
-TRIM= '(?i)trim';
-TRUE= '(?i)true';
-UNION= '(?i)union';
-UNIQUE= '(?i)unique';
-UNKNOWN= '(?i)unknown';
-UPPER= '(?i)upper';
-USER= '(?i)user';
-USING= '(?i)using';
-VALUE= '(?i)value';
-VALUES= '(?i)values';
-VARCHAR= '(?i)varchar';
-VARYING= '(?i)varying';
-WHEN= '(?i)when';
-WHERE= '(?i)where';
-WITH= '(?i)with';
-YEAR= '(?i)year';
-ZONE= '(?i)zone';
+ALL= "ALL";
+AND= "AND";
+ANY= "ANY";
+AS= "AS";
+ASC= "ASC";
+AT= "AT";
+AVG= "AVG";
+BETWEEN= "BETWEEN";
+BIT= "BIT";
+BIT_LENGTH= "BIT_LENGTH";
+BOTH= "BOTH";
+BY= "BY";
+CASE= "CASE";
+CAST= "CAST";
+CHAR= "CHAR";
+CHARACTER= "CHARACTER";
+CHAR_LENGTH= "CHAR_LENGTH";
+CHARACTER_LENGTH= "CHARACTER_LENGTH";
+COALESCE= "COALESCE";
+COLLATE= "COLLATE";
+CONVERT= "CONVERT";
+CORRESPONDING= "CORRESPONDING";
+COUNT= "COUNT";
+CROSS= "CROSS";
+CURRENT_DATE= "CURRENT_DATE";
+CURRENT_TIME= "CURRENT_TIME";
+CURRENT_TIMESTAMP= "CURRENT_TIMESTAMP";
+CURRENT_USER= "CURRENT_USER";
+DATE= "DATE";
+DAY= "DAY";
+DEC= "DEC";
+DECIMAL= "DECIMAL";
+DEFAULT= "DEFAULT";
+DESC= "DESC";
+DISTINCT= "DISTINCT";
+DOUBLE= "DOUBLE";
+ELSE= "ELSE";
+END= "END";
+ESCAPE= "ESCAPE";
+EXCEPT= "EXCEPT";
+EXISTS= "EXISTS";
+EXTRACT= "EXTRACT";
+FALSE= "FALSE";
+FLOAT= "FLOAT";
+FOR= "FOR";
+FROM= "FROM";
+FULL= "FULL";
+GROUP= "GROUP";
+HAVING= "HAVING";
+HOUR= "HOUR";
+IN= "IN";
+INDICATOR= "INDICATOR";
+INNER= "INNER";
+INT= "INT";
+INTEGER= "INTEGER";
+INTERSECT= "INTERSECT";
+INTERVAL= "INTERVAL";
+IS= "IS";
+JOIN= "JOIN";
+LEADING= "LEADING";
+LEFT= "LEFT";
+LIKE= "LIKE";
+LOCAL= "LOCAL";
+LOWER= "LOWER";
+MATCH= "MATCH";
+MAX= "MAX";
+MIN= "MIN";
+MINUTE= "MINUTE";
+MONTH= "MONTH";
+NATIONAL= "NATIONAL";
+NATURAL= "NATURAL";
+NCHAR= "NCHAR";
+NOT= "NOT";
+NULL= "NULL";
+NULLIF= "NULLIF";
+NUMERIC= "NUMERIC";
+OCTET_LENGTH= "OCTET_LENGTH";
+ON= "ON";
+OR= "OR";
+ORDER= "ORDER";
+OUTER= "OUTER";
+OVERLAPS= "OVERLAPS";
+PARTIAL= "PARTIAL";
+POSITION= "POSITION";
+PRECISION= "PRECISION";
+REAL= "REAL";
+RIGHT= "RIGHT";
+SECOND= "SECOND";
+SELECT= "SELECT";
+SESSION_USER= "SESSION_USER";
+SET= "SET";
+SMALLINT= "SMALLINT";
+SOME= "SOME";
+SUBSTRING= "SUBSTRING";
+SUM= "SUM";
+SYSTEM_USER= "SYSTEM_USER";
+TABLE= "TABLE";
+THEN= "THEN";
+TIME= "TIME";
+TIMESTAMP= "TIMESTAMP";
+TIMEZONE_HOUR= "TIMEZONE_HOUR";
+TIMEZONE_MINUTE= "TIMEZONE_MINUTE";
+TO= "TO";
+TRAILING= "TRAILING";
+TRANSLATE= "TRANSLATE";
+TRIM= "TRIM";
+TRUE= "TRUE";
+UNION= "UNION";
+UNIQUE= "UNIQUE";
+UNKNOWN= "UNKNOWN";
+UPPER= "UPPER";
+USER= "USER";
+USING= "USING";
+VALUE= "VALUE";
+VALUES= "VALUES";
+VARCHAR= "VARCHAR";
+VARYING= "VARYING";
+WHEN= "WHEN";
+WHERE= "WHERE";
+WITH= "WITH";
+YEAR= "YEAR";
+ZONE= "ZONE";
 // The rest of SQL-92's reserved words. No rule uses them; declaring them keeps them from being read
 // as identifiers. (END-EXEC lexes as END, -, and EXEC.)
-reserved_word= '(?i)(absolute|action|add|allocate|alter|are|assertion|authorization|begin|cascade|cascaded|catalog|check|close|collation|column|commit|connect|connection|constraint|constraints|continue|create|current|cursor|deallocate|declare|deferrable|deferred|delete|describe|descriptor|diagnostics|disconnect|domain|drop|exception|exec|execute|external|fetch|first|foreign|found|get|global|go|goto|grant|identity|immediate|initially|input|insensitive|insert|into|isolation|key|language|last|level|module|names|next|no|of|only|open|option|output|pad|prepare|preserve|primary|prior|privileges|procedure|public|read|references|relative|restrict|revoke|rollback|rows|schema|scroll|section|session|size|space|sql|sqlcode|sqlerror|sqlstate|temporary|transaction|translation|update|usage|view|whenever|work|write)';
+reserved_word= '(absolute|action|add|allocate|alter|are|assertion|authorization|begin|cascade|cascaded|catalog|check|close|collation|column|commit|connect|connection|constraint|constraints|continue|create|current|cursor|deallocate|declare|deferrable|deferred|delete|describe|descriptor|diagnostics|disconnect|domain|drop|exception|exec|execute|external|fetch|first|foreign|found|get|global|go|goto|grant|identity|immediate|initially|input|insensitive|insert|into|isolation|key|language|last|level|module|names|next|no|of|only|open|option|output|pad|prepare|preserve|primary|prior|privileges|procedure|public|read|references|relative|restrict|revoke|rollback|rows|schema|scroll|section|session|size|space|sql|sqlcode|sqlerror|sqlstate|temporary|transaction|translation|update|usage|view|whenever|work|write)';
 
 // 5.2 and 5.4 Identifiers: a letter, then letters, digits and _; or anything in double quotes, with
 // "" for a quote
-regular_identifier= '[A-Za-z][A-Za-z0-9_]*';
+regular_identifier= '[A-Z][A-Z0-9_]*';
 delimited_identifier= '"([^"]|"")+"';
 // 6.2 Host parameters, as in embedded SQL and modules
 host_parameter_name= ':[A-Za-z][A-Za-z0-9_]*';

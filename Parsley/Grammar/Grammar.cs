@@ -185,6 +185,10 @@ namespace Parsley
 		/// </summary>
 		public bool IsSync => Attributes.IsSet("sync");
 		/// <summary>
+		/// The <c>ignoreCase</c> attribute: true or false when given, overriding the grammar's @ignoreCase, or null
+		/// </summary>
+		public bool? IgnoreCase => Attributes.Get("ignoreCase") as bool?;
+		/// <summary>
 		/// Created for a literal used inline in a production without a declaration of its own
 		/// </summary>
 		public bool IsImplicit { get; internal set; }
@@ -440,6 +444,12 @@ namespace Parsley
 		/// given; a rule's or group's <c>factor</c> attribute overrides it.
 		/// </summary>
 		public bool? Factor => Directives.TryGetValue("factor", out var f) ? ("true" == f ? true : "false" == f ? false : null) : null;
+		/// <summary>
+		/// The @ignoreCase directive: whether this grammar's terminals match letters in either case unless their own
+		/// <c>ignoreCase</c> attribute says otherwise. False if not given. It applies to this grammar and what it
+		/// imports, not to @external grammars, which have their own.
+		/// </summary>
+		public bool IgnoreCase => Directives.TryGetValue("ignoreCase", out var i) && "true" == i;
 
 		public Grammar Clone()
 		{
@@ -626,6 +636,12 @@ namespace Parsley
 							if (!(a.Value is bool))
 								result.Add(new GrammarMessage(ErrorLevel.Warning, $"On \"{t.Name}\": {a.Name} expects true or false", a));
 							break;
+						case "ignoreCase":
+							if (!(a.Value is bool))
+								result.Add(new GrammarMessage(ErrorLevel.Error, $"On \"{t.Name}\": ignoreCase expects true or false", a));
+							else if (t.IsContextual || t.IsIsland)
+								result.Add(new GrammarMessage(ErrorLevel.Warning, $"On \"{t.Name}\": ignoreCase has no effect, since {(t.IsIsland ? "an island's text is lexed by its own grammar" : "a contextual terminal is read from another terminal's tokens, not lexed")}", a));
+							break;
 						case "type": case "expected":
 							if (!(a.Value is string))
 								result.Add(new GrammarMessage(ErrorLevel.Warning, $"On \"{t.Name}\": {a.Name} expects a string", a));
@@ -707,11 +723,19 @@ namespace Parsley
 				}
 		}
 		// the attributes a terminal's declaration takes
-		static readonly HashSet<string> _terminalAttributes = new HashSet<string> { "hidden", "collapsed", "terminal", "type", "when", "matched", "lexer", "on", "after", "entry", "nest", "pop", "popOnError", "startsWith", "shared" };
+		static readonly HashSet<string> _terminalAttributes = new HashSet<string> { "hidden", "collapsed", "terminal", "type", "when", "matched", "lexer", "on", "after", "entry", "nest", "pop", "popOnError", "startsWith", "shared", "ignoreCase" };
 		static void _ValidateAttributes(AttributeList attrs, GrammarNode owner, bool isProduction, IList<GrammarMessage> result)
 		{
 			foreach (var a in attrs)
 			{
+				// only the lexer matches text, so only a terminal can ignore case
+				if ("ignoreCase" == a.Name)
+				{
+					result.Add(new GrammarMessage(ErrorLevel.Error, isProduction
+						? "ignoreCase goes on a terminal; this rule is a non-terminal. Only a lone literal or pattern is a terminal by default: mark it <terminal> otherwise"
+						: "ignoreCase goes on a terminal, not on a group in a non-terminal. Declare the text as a terminal with ignoreCase and use it by name", a));
+					continue;
+				}
 				var known = isProduction ? _productionAttributes : _expressionAttributes;
 				if (!known.Contains(a.Name))
 				{

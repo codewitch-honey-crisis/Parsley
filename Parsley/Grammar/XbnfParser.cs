@@ -10,7 +10,7 @@ namespace Parsley
 	/// <summary>
 	/// Reads XBNF. A rule whose right side is a lone "literal" or 'pattern' declares a terminal, as does one marked
 	/// &lt;terminal&gt;, an island (a rule with entry= and no body) or a contextual terminal; anything else declares a
-	/// non-terminal. Supports @import, @class, @evaluator, @using, @maxk, @factor, @external and @lexer directives,
+	/// non-terminal. Supports @import, @class, @evaluator, @using, @maxk, @factor, @ignoreCase, @external and @lexer directives,
 	/// attributed groups: <c>( … )&lt;attrs&gt;</c>, <c>[ … ]&lt;attrs&gt;</c>, <c>{ … }&lt;attrs&gt;</c>, and semantic actions:
 	/// <c>Name= expression =&gt; { C# };</c>
 	/// </summary>
@@ -581,8 +581,9 @@ namespace Parsley
 						_grammar.Usings.Add(u);
 						break;
 					case "factor":
+					case "ignoreCase":
 						if ("true" != arg && "false" != arg)
-							_messages.Add(new GrammarMessage(ErrorLevel.Error, $"@factor expects true or false, not \"{arg}\"", at));
+							_messages.Add(new GrammarMessage(ErrorLevel.Error, $"@{name} expects true or false, not \"{arg}\"", at));
 						else
 						{
 							_grammar.Directives[name] = arg;

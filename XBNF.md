@@ -112,6 +112,40 @@ For example, with `letter= '[a-z]';` and `digit= '[0-9]';`:
 Ident<terminal>= letter { letter | digit | "_" };   // [a-z]([a-z]|[0-9]|_)*
 ```
 
+### Case-insensitive terminals
+
+A terminal that ignores case matches letters in either case. `ignoreCase` on a terminal says whether it does; `@ignoreCase true;` makes it the default for every terminal in the grammar, implicit ones included, and a terminal's own `ignoreCase` overrides the directive either way. Both default to `false`.
+
+```xbnf
+@ignoreCase true;
+
+SELECT= "SELECT";                       // (?i)SELECT: matches select, Select, SELECT…
+Name<ignoreCase=false>= '[A-Z][a-z]+';  // [A-Z][a-z]+: case-sensitive despite the directive
+```
+
+It works by putting `(?i)` in front of the terminal's regex, unless the inline modifiers it starts with already turn case-insensitivity on for all of it: `(?i)`, `(?si)` or `(?x)(?i)`, for instance. A scoped modifier such as `(?i:abc)` covers only its own group, so it doesn't count, and neither does `(?i)` anywhere but the start. A pattern that turns it back off with `(?-i)` keeps that part case-sensitive, so a pattern always has the last word. Writing `(?i)` at the start of a pattern yourself still works, and does the same thing for that one terminal.
+
+A [`<terminal>`](#terminals-and-non-terminals) rule that inlines other terminals inlines each with its own case sensitivity. Where one differs from the rule it's inlined into, it's scoped to its part alone:
+
+```xbnf
+@ignoreCase true;
+
+letter<ignoreCase=false>= '[a-z]';
+digit= '[0-9]';
+Ident<terminal>= letter { letter | digit };   // (?i)(?-i:[a-z])((?-i:[a-z])|[0-9])*
+```
+
+**Declaration order still decides ties.** The lexer gives text that two terminals match equally to the one declared first, and that includes a case-sensitive terminal and a case-insensitive one. To have both, declare the case-sensitive one first: it takes the exact text and the other takes every other spelling.
+
+```xbnf
+exact= "Select";                // only Select
+any<ignoreCase>= "select";      // select, SELECT, sElEcT…: everything but Select
+```
+
+The other way around, `any` matches `Select` too and wins the tie, so `exact` is never lexed. Parsley warns when a literal that ignores case comes before one that differs from it only in case, which includes a literal used inline that becomes an implicit terminal after a declared one that already matches it: use the declared one by name. It can't tell for patterns, so for those keep the order in mind.
+
+`ignoreCase` goes only on terminals, since only the lexer matches text. On a non-terminal, on a group inside one, or on a literal used inline, it's an error; on a contextual terminal or an island, neither of which this grammar's lexer produces, it has no effect and gets a warning. `@ignoreCase` applies to this grammar and what it `@import`s, following the same rule as other directives, but not to `@external` grammars: an island's grammar has its own `@ignoreCase`, or none.
+
 ### Literals used inline
 
 A literal or pattern written directly inside a non-terminal, like `"{"` in `Object= "{" … "}";`, refers to a terminal:
@@ -169,6 +203,7 @@ Values can be:
 | `collapsed` | flag | The parser checks it as usual but leaves it out of the parse tree (punctuation). |
 | `sync` | flag | A strong restart point for error recovery anywhere in the grammar, typically `;` or `}`. |
 | `terminal` | `true` / `false` | Forces terminal or non-terminal (see above). |
+| `ignoreCase` | `true` / `false` | Whether the terminal matches letters in either case, whatever `@ignoreCase` says. `false` if neither is given. See [Case-insensitive terminals](#case-insensitive-terminals). |
 | `when` | method name | Makes a contextual terminal, read by the parser from another terminal's tokens. See [Parse-time hooks](#parse-time-hooks-and-contextual-terminals). With `lexer`, it's the lexer controller's instead: see [Terminals from other lexers](#terminals-from-other-lexers). |
 | `matched` | method name | A method the parser calls with each token of this terminal it matches. See [Parse-time hooks](#parse-time-hooks-and-contextual-terminals). |
 | `lexer` | name | Another lexer produces this terminal, where `on` and `when` say. See [Terminals from other lexers](#terminals-from-other-lexers). |
@@ -207,6 +242,7 @@ Block= "{" { Stmt }<sync="semi"> "}";
 | `@class "MyParser";`<br>`@class "My.Parsers.MyParser";` | The class name of the synthesized parser, with its namespace before the last dot. By default it's the file name in PascalCase plus `Parser`, so `json.xbnf` gives `JsonParser`, in no namespace. `@namespace`, which gave the namespace on its own, is no longer supported: it's an error that says what to write instead. |
 | `@maxk 2;` | The most tokens a decision with fixed lookahead looks at; 4 if not given. A decision that needs more is predicted by ALL(\*) at parse time, or settled by its `policy`. A lower limit gives smaller predictors at the cost of more ALL(\*); a higher one, the reverse. It's part of the grammar so the same grammar always synthesizes the same parser. A `maxk` attribute on a rule or a decision sets its own limit. |
 | `@factor true;` | [Left factors](#left-factoring) every alternation whose alternatives can start with the same token. `false`, or not given, leaves the grammar as written. A rule's or group's `factor` attribute overrides it. |
+| `@ignoreCase true;` | Makes every terminal in the grammar match letters in either case, implicit terminals included. `false`, or not given, leaves case significant. A terminal's `ignoreCase` attribute overrides it. It doesn't reach `@external` grammars. See [Case-insensitive terminals](#case-insensitive-terminals). |
 | `@evaluator "MyEvaluator";` | The class name of the synthesized evaluator, in the parser's namespace, so it can't give one of its own. It's used as written, with `@` added in front of a C# keyword. By default it's the file name in PascalCase plus `Evaluator`, so `json.xbnf` gives `JsonEvaluator`. Only matters when the grammar has [semantic actions](#semantic-actions); without any, it's ignored with a warning. |
 | `@using "System.Text";` | Adds `using System.Text;` to the top of the synthesized file, so [semantic actions](#semantic-actions) can use the namespace's types without qualifying them. Give it once per namespace; it can appear any number of times. The argument must be a namespace name, such as `System.Text` or `My.@class`: not `static` or an alias. A namespace the file already imports, or one given twice, is written once, without a message. Usings from an `@import`ed file are added to the importer's. Only matters when the grammar has semantic actions; without any, it's ignored with a warning and the file is unchanged. |
 | `@external Json "json.xbnf";` | Another grammar, known here by an alias, whose shared rules parse [islands](#islands) in this one. The path is relative to this file. The grammar is read on its own, as if it were being synthesized by itself: none of its rules or directives are merged into this one, and only its errors are reported here. A grammar can't embed itself, directly or through others. |
@@ -705,6 +741,10 @@ Left recursion is rewritten automatically:
 | `@factor` that isn't `true` or `false` | Error |
 | `factor` that isn't `true` or `false` | Warning |
 | `maxk` that isn't a whole number of at least 1 | Error |
+| `@ignoreCase` or `ignoreCase` that isn't `true` or `false` | Error |
+| `ignoreCase` on a non-terminal, on a group in one, on a literal used inline, or inside a terminal's definition | Error |
+| `ignoreCase` on a contextual terminal or an island | Warning: it has no effect |
+| A literal that's never lexed because a literal declared before it ignores case and differs from it only in case | Warning |
 | An alternation left factored | Message: which, and on what tokens |
 | An alternation factoring would grow too much, or couldn't make decidable on one token | Message: it's left as written |
 | [Operator rules](#operator-rules): | |

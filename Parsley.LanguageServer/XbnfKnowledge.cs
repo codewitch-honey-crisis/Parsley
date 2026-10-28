@@ -12,6 +12,7 @@ namespace Parsley.LanguageServer
             ["start"] = "Flag. This rule is the start symbol; otherwise the first non-terminal is.",
             ["collapsed"] = "Flag. The rule (or terminal) gets no node in the parse tree; its children go into its parent's.",
             ["hidden"] = "Flag, on a terminal. The lexer matches it but never reports it (whitespace, comments).",
+            ["ignoreCase"] = "`true` or `false`, on a terminal. Whether it matches letters in either case, whatever `@ignoreCase` says. Defaults to false. An error on a non-terminal.",
             ["terminal"] = "`true` or `false`. Forces the rule to be a terminal or a non-terminal. Without it, only a lone literal or pattern is a terminal; `<terminal>` lets a terminal combine them and inline other terminals.",
             ["nowarn"] = "Flag. Suppresses the \"unreachable from the start symbol\" warning.",
             ["expected"] = "String. How the rule or alternation is named in error messages: `expected=\"a statement\"`.",
@@ -46,6 +47,7 @@ namespace Parsley.LanguageServer
             ["start"] = new[] { "true", "false" },
             ["collapsed"] = new[] { "true", "false" },
             ["hidden"] = new[] { "true", "false" },
+            ["ignoreCase"] = new[] { "true", "false" },
             ["nowarn"] = new[] { "true", "false" },
             ["operators"] = new[] { "true", "false" },
             ["shared"] = new[] { "true", "false" },
@@ -61,6 +63,7 @@ namespace Parsley.LanguageServer
             ["using"] = "`@using \"System.Text\";` A namespace for semantic actions to use.",
             ["maxk"] = "`@maxk 2;` The most tokens a fixed-lookahead decision looks at; 4 if not given.",
             ["factor"] = "`@factor true;` Left factors alternations whose alternatives start alike, so one token decides. The tree doesn't change.",
+            ["ignoreCase"] = "`@ignoreCase true;` Makes every terminal match letters in either case, unless its own `ignoreCase` says otherwise. Defaults to false. Doesn't reach `@external` grammars.",
             ["external"] = "`@external Json \"json.xbnf\";` Another grammar, by an alias, whose shared rules parse islands in this one.",
             ["lexer"] = "`@lexer \"My.Lexers.MyLexer\";` or `@lexer Json \"My.JsonLexer\";` The type whose static Tokenize lexes this grammar, or an alias's, with its namespace before the last dot. Ignored, with a warning, by Parsley.Generator, which generates its lexers.",
         };
